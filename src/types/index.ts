@@ -1,10 +1,11 @@
-export type ExceptionRuleType = 'normal' | 'pause' | 'early_complete';
+export type ExceptionRuleType = 'normal' | 'pause' | 'early_complete' | 'extend_time' | 'cancel_focus';
 
 export interface ExceptionRule {
   id: string;
   description: string;
   type: ExceptionRuleType;
   createdAt: Date;
+  extendMinutes?: number; // 延长时间规则的具体分钟数
 }
 
 export interface Chain {

@@ -103,6 +103,8 @@ function App() {
               onAddException={handleAddException}
               onPause={handlePauseSession}
               onResume={handleResumeSession}
+              onExtendTime={handleExtendTime}
+              onCancelFocus={handleCancelFocus}
             />
             {showAuxiliaryJudgment && (
               <AuxiliaryJudgment
@@ -473,6 +475,41 @@ function App() {
       return {
         ...prev,
         activeSession: updatedSession,
+      };
+    });
+  };
+
+  const handleExtendTime = async (extendMinutes: number) => {
+    if (!state.activeSession) return;
+
+    setState(prev => {
+      const updatedSession = {
+        ...prev.activeSession!,
+        duration: prev.activeSession!.duration + extendMinutes * 60 * 1000, // 将分钟转换为毫秒
+      };
+      
+      // 异步保存但不阻塞UI更新
+      storage.saveActiveSession(updatedSession);
+      
+      return {
+        ...prev,
+        activeSession: updatedSession,
+      };
+    });
+  };
+
+  const handleCancelFocus = async () => {
+    if (!state.activeSession) return;
+
+    // 取消专注不记录任何数据，直接清除当前会话
+    setState(prev => {
+      // 清除active session存储
+      storage.saveActiveSession(null);
+      
+      return {
+        ...prev,
+        activeSession: null,
+        currentView: 'dashboard',
       };
     });
   };

@@ -9,9 +9,11 @@ interface FocusModeProps {
   chain: Chain;
   onComplete: () => void;
   onInterrupt: (reason?: string) => void;
-  onAddException: (exceptionRule: { description: string; type: ExceptionRuleType }) => void;
+  onAddException: (exceptionRule: { description: string; type: ExceptionRuleType; extendMinutes?: number }) => void;
   onPause: () => void;
   onResume: () => void;
+  onExtendTime: (minutes: number) => void;
+  onCancelFocus: () => void;
 }
 
 const FocusMode: React.FC<FocusModeProps> = ({
@@ -22,6 +24,8 @@ const FocusMode: React.FC<FocusModeProps> = ({
   onAddException,
   onPause,
   onResume,
+  onExtendTime,
+  onCancelFocus,
 }) => {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [showInterruptWarning, setShowInterruptWarning] = useState(false);
@@ -29,6 +33,7 @@ const FocusMode: React.FC<FocusModeProps> = ({
   const [selectedExistingRule, setSelectedExistingRule] = useState('');
   const [useExistingRule, setUseExistingRule] = useState(false);
   const [ruleType, setRuleType] = useState<ExceptionRuleType>('normal');
+  const [extendMinutes, setExtendMinutes] = useState<number>(5);
 
   useEffect(() => {
     const calculateTimeRemaining = () => {
@@ -77,7 +82,11 @@ const FocusMode: React.FC<FocusModeProps> = ({
       const selectedRule = chain.exceptions.find(rule => rule.id === selectedExistingRule);
       if (selectedRule) {
         // 根据规则类型执行相应动作
-        executeRuleAction(selectedRule.type);
+        if (selectedRule.type === 'extend_time' && selectedRule.extendMinutes) {
+          executeRuleAction(selectedRule.type, selectedRule.extendMinutes);
+        } else {
+          executeRuleAction(selectedRule.type);
+        }
       }
     } else {
       const ruleToAdd = interruptReason.trim();
@@ -88,21 +97,30 @@ const FocusMode: React.FC<FocusModeProps> = ({
           // 添加新规则
           const newRule = {
             description: ruleToAdd,
-            type: ruleType
+            type: ruleType,
+            ...(ruleType === 'extend_time' && extendMinutes > 0 && { extendMinutes })
           };
           onAddException(newRule);
           // 执行规则动作
-          executeRuleAction(ruleType);
+          if (ruleType === 'extend_time' && extendMinutes > 0) {
+            executeRuleAction(ruleType, extendMinutes);
+          } else {
+            executeRuleAction(ruleType);
+          }
         } else {
           // 使用已有规则
-          executeRuleAction(existingRule.type);
+          if (existingRule.type === 'extend_time' && existingRule.extendMinutes) {
+            executeRuleAction(existingRule.type, existingRule.extendMinutes);
+          } else {
+            executeRuleAction(existingRule.type);
+          }
         }
       }
     }
     setShowInterruptWarning(false);
   };
 
-  const executeRuleAction = (type: ExceptionRuleType) => {
+  const executeRuleAction = (type: ExceptionRuleType, extendTime?: number) => {
     switch (type) {
       case 'pause':
         onPause();
@@ -111,6 +129,16 @@ const FocusMode: React.FC<FocusModeProps> = ({
       case 'early_complete':
         onComplete();
         showNotification('任务提前完成', '根据例外规则，任务已提前结束');
+        break;
+      case 'extend_time':
+        if (extendTime && extendTime > 0) {
+          onExtendTime(extendTime);
+          showNotification('任务时间已延长', `根据例外规则，任务时间延长${extendTime}分钟`);
+        }
+        break;
+      case 'cancel_focus':
+        onCancelFocus();
+        showNotification('专注已取消', '根据例外规则，专注已取消且不计入记录');
         break;
       case 'normal':
       default:
@@ -126,6 +154,10 @@ const FocusMode: React.FC<FocusModeProps> = ({
         return '暂停计时';
       case 'early_complete':
         return '提前结束';
+      case 'extend_time':
+        return '延长计时';
+      case 'cancel_focus':
+        return '取消专注';
       case 'normal':
       default:
         return '普通规则';
@@ -138,6 +170,10 @@ const FocusMode: React.FC<FocusModeProps> = ({
         return '此行为将暂停任务计时';
       case 'early_complete':
         return '此行为将提前结束任务并记录完成';
+      case 'extend_time':
+        return '此行为将延长任务计时时间';
+      case 'cancel_focus':
+        return '此行为将取消专注且不计入记录';
       case 'normal':
       default:
         return '此行为已被允许，可以继续任务';
@@ -150,6 +186,10 @@ const FocusMode: React.FC<FocusModeProps> = ({
         return 'bg-blue-500/90 hover:bg-blue-500';
       case 'early_complete':
         return 'bg-green-500/90 hover:bg-green-500';
+      case 'extend_time':
+        return 'bg-purple-500/90 hover:bg-purple-500';
+      case 'cancel_focus':
+        return 'bg-red-500/90 hover:bg-red-500';
       case 'normal':
       default:
         return 'bg-yellow-500/90 hover:bg-yellow-500';
@@ -162,6 +202,10 @@ const FocusMode: React.FC<FocusModeProps> = ({
         return 'text-blue-200';
       case 'early_complete':
         return 'text-green-200';
+      case 'extend_time':
+        return 'text-purple-200';
+      case 'cancel_focus':
+        return 'text-red-200';
       case 'normal':
       default:
         return 'text-yellow-200';
@@ -331,7 +375,8 @@ const FocusMode: React.FC<FocusModeProps> = ({
                   >
                     {chain.exceptions.map((exception, index) => (
                       <option key={index} value={exception.id} className="bg-white dark:bg-gray-800">
-                        {exception.description} ({getRuleTypeText(exception.type)})
+                        {exception.description} ({getRuleTypeText(exception.type)}
+                        {exception.type === 'extend_time' && exception.extendMinutes ? ` - ${exception.extendMinutes}分钟` : ''})
                       </option>
                     ))}
                   </select>
@@ -339,7 +384,13 @@ const FocusMode: React.FC<FocusModeProps> = ({
                     <div className="flex items-center space-x-3 text-green-700 dark:text-green-300">
                       <CheckCircle size={20} />
                       <span className="text-sm font-chinese">
-                        {getRuleActionText(chain.exceptions.find(r => r.id === selectedExistingRule)?.type || 'normal')}
+                        {(() => {
+                          const selectedRule = chain.exceptions.find(r => r.id === selectedExistingRule);
+                          if (selectedRule?.type === 'extend_time' && selectedRule.extendMinutes) {
+                            return `${getRuleActionText(selectedRule.type)} ${selectedRule.extendMinutes}分钟`;
+                          }
+                          return getRuleActionText(selectedRule?.type || 'normal');
+                        })()}
                       </span>
                     </div>
                   </div>
@@ -427,7 +478,68 @@ const FocusMode: React.FC<FocusModeProps> = ({
                         </div>
                         <span className="text-green-700 dark:text-green-300 text-sm font-chinese">提前结束 - 高效完成任务提前结束</span>
                       </label>
+                      <label className="flex items-center space-x-3 cursor-pointer">
+                        <div className="relative">
+                          <input
+                            type="radio"
+                            name="newRuleType"
+                            value="extend_time"
+                            checked={ruleType === 'extend_time'}
+                            onChange={(e) => setRuleType(e.target.value as ExceptionRuleType)}
+                            className="sr-only"
+                          />
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            ruleType === 'extend_time' 
+                              ? 'border-purple-500 bg-purple-500' 
+                              : 'border-gray-300 dark:border-gray-500'
+                          }`}>
+                            {ruleType === 'extend_time' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                          </div>
+                        </div>
+                        <span className="text-purple-700 dark:text-purple-300 text-sm font-chinese">延长计时 - 延长当前计时时间</span>
+                      </label>
+                      <label className="flex items-center space-x-3 cursor-pointer">
+                        <div className="relative">
+                          <input
+                            type="radio"
+                            name="newRuleType"
+                            value="cancel_focus"
+                            checked={ruleType === 'cancel_focus'}
+                            onChange={(e) => setRuleType(e.target.value as ExceptionRuleType)}
+                            className="sr-only"
+                          />
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            ruleType === 'cancel_focus' 
+                              ? 'border-red-500 bg-red-500' 
+                              : 'border-gray-300 dark:border-gray-500'
+                          }`}>
+                            {ruleType === 'cancel_focus' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                          </div>
+                        </div>
+                        <span className="text-red-700 dark:text-red-300 text-sm font-chinese">取消专注 - 立即停止计时且不计入记录</span>
+                      </label>
                     </div>
+                    
+                    {/* 延长时间输入框 */}
+                    {ruleType === 'extend_time' && (
+                      <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-500/10 rounded-2xl border border-purple-200 dark:border-purple-500/30">
+                        <label className="block text-purple-700 dark:text-purple-300 text-sm font-medium mb-2 font-chinese">
+                          延长时间（分钟）：
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="120"
+                          value={extendMinutes}
+                          onChange={(e) => setExtendMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-full bg-white dark:bg-gray-800/50 border border-purple-300 dark:border-purple-500/30 rounded-2xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 font-chinese"
+                          placeholder="输入延长的分钟数"
+                        />
+                        <p className="mt-2 text-purple-600 dark:text-purple-400 text-xs font-chinese">
+                          建议延长 5-30 分钟，最多 120 分钟
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {interruptReason.trim() && chain.exceptions.some(rule => rule.description === interruptReason.trim()) && (

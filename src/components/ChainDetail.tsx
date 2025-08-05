@@ -28,6 +28,7 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
   const [editingAuxiliaryExceptions, setEditingAuxiliaryExceptions] = useState([...chain.auxiliaryExceptions || []]);
   const [newException, setNewException] = useState('');
   const [newExceptionType, setNewExceptionType] = useState<ExceptionRuleType>('normal');
+  const [newExtendMinutes, setNewExtendMinutes] = useState(5);
   const [newAuxiliaryException, setNewAuxiliaryException] = useState('');
 
   const successRate = chain.totalCompletions > 0 
@@ -61,11 +62,13 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
           id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           description: newRule,
           type: newExceptionType,
-          createdAt: new Date()
+          createdAt: new Date(),
+          ...(newExceptionType === 'extend_time' && { extendMinutes: newExtendMinutes })
         };
         setEditingExceptions([...editingExceptions, newExceptionRule]);
         setNewException('');
         setNewExceptionType('normal');
+        setNewExtendMinutes(5);
       }
     }
   };
@@ -267,7 +270,7 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                             <span className="text-xs text-yellow-600 dark:text-yellow-400 font-chinese mb-2 block">
                               规则类型：
                             </span>
-                            <div className="flex space-x-4">
+                            <div className="flex flex-wrap gap-2">
                               <label className="flex items-center space-x-2 cursor-pointer">
                                 <div className="relative">
                                   <input
@@ -340,7 +343,80 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                                 </div>
                                 <span className="text-xs text-green-700 dark:text-green-300 font-chinese">提前结束</span>
                               </label>
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    name={`exceptionType_${index}`}
+                                    value="extend_time"
+                                    checked={exception.type === 'extend_time'}
+                                    onChange={(e) => {
+                                      const updated = [...editingExceptions];
+                                      updated[index] = { ...updated[index], type: e.target.value as ExceptionRuleType };
+                                      setEditingExceptions(updated);
+                                    }}
+                                    className="sr-only"
+                                  />
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    exception.type === 'extend_time' 
+                                      ? 'border-purple-500 bg-purple-500' 
+                                      : 'border-gray-300 dark:border-gray-500'
+                                  }`}>
+                                    {exception.type === 'extend_time' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                  </div>
+                                </div>
+                                <span className="text-xs text-purple-700 dark:text-purple-300 font-chinese">延长时间</span>
+                              </label>
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    name={`exceptionType_${index}`}
+                                    value="cancel_focus"
+                                    checked={exception.type === 'cancel_focus'}
+                                    onChange={(e) => {
+                                      const updated = [...editingExceptions];
+                                      updated[index] = { ...updated[index], type: e.target.value as ExceptionRuleType };
+                                      setEditingExceptions(updated);
+                                    }}
+                                    className="sr-only"
+                                  />
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    exception.type === 'cancel_focus' 
+                                      ? 'border-red-500 bg-red-500' 
+                                      : 'border-gray-300 dark:border-gray-500'
+                                  }`}>
+                                    {exception.type === 'cancel_focus' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                  </div>
+                                </div>
+                                <span className="text-xs text-red-700 dark:text-red-300 font-chinese">取消专注</span>
+                              </label>
                             </div>
+                            
+                            {/* 延长时间输入框 */}
+                            {exception.type === 'extend_time' && (
+                              <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-500/10 rounded-xl border border-purple-200 dark:border-purple-500/30">
+                                <label className="block text-purple-700 dark:text-purple-300 text-xs font-medium mb-2 font-chinese">
+                                  延长时间（分钟）：
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="120"
+                                  value={exception.extendMinutes || 5}
+                                  onChange={(e) => {
+                                    const updated = [...editingExceptions];
+                                    updated[index] = { 
+                                      ...updated[index], 
+                                      extendMinutes: Math.max(1, parseInt(e.target.value) || 1) 
+                                    };
+                                    setEditingExceptions(updated);
+                                  }}
+                                  className="w-full bg-white dark:bg-gray-800/50 border border-purple-300 dark:border-purple-500/30 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 transition-all duration-300 font-chinese"
+                                  placeholder="输入延长的分钟数"
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -359,7 +435,7 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                           
                           <div className="flex items-center space-x-4">
                             <span className="text-sm text-gray-600 dark:text-gray-400 font-chinese">规则类型：</span>
-                            <div className="flex space-x-4">
+                            <div className="flex flex-wrap gap-2">
                               <label className="flex items-center space-x-2 cursor-pointer">
                                 <div className="relative">
                                   <input
@@ -420,6 +496,46 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                                 </div>
                                 <span className="text-sm text-green-700 dark:text-green-300 font-chinese">提前结束</span>
                               </label>
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    name="exceptionType"
+                                    value="extend_time"
+                                    checked={newExceptionType === 'extend_time'}
+                                    onChange={(e) => setNewExceptionType(e.target.value as ExceptionRuleType)}
+                                    className="sr-only"
+                                  />
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    newExceptionType === 'extend_time' 
+                                      ? 'border-purple-500 bg-purple-500' 
+                                      : 'border-gray-300 dark:border-gray-500'
+                                  }`}>
+                                    {newExceptionType === 'extend_time' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                  </div>
+                                </div>
+                                <span className="text-sm text-purple-700 dark:text-purple-300 font-chinese">延长时间</span>
+                              </label>
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    name="exceptionType"
+                                    value="cancel_focus"
+                                    checked={newExceptionType === 'cancel_focus'}
+                                    onChange={(e) => setNewExceptionType(e.target.value as ExceptionRuleType)}
+                                    className="sr-only"
+                                  />
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    newExceptionType === 'cancel_focus' 
+                                      ? 'border-red-500 bg-red-500' 
+                                      : 'border-gray-300 dark:border-gray-500'
+                                  }`}>
+                                    {newExceptionType === 'cancel_focus' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                  </div>
+                                </div>
+                                <span className="text-sm text-red-700 dark:text-red-300 font-chinese">取消专注</span>
+                              </label>
                             </div>
                             <button
                               onClick={() => handleAddException(false)}
@@ -428,6 +544,24 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                               <Plus size={16} />
                             </button>
                           </div>
+                          
+                          {/* 延长时间输入框 */}
+                          {newExceptionType === 'extend_time' && (
+                            <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-500/10 rounded-xl border border-purple-200 dark:border-purple-500/30">
+                              <label className="block text-purple-700 dark:text-purple-300 text-xs font-medium mb-2 font-chinese">
+                                延长时间（分钟）：
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="120"
+                                value={newExtendMinutes}
+                                onChange={(e) => setNewExtendMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="w-full bg-white dark:bg-gray-800/50 border border-purple-300 dark:border-purple-500/30 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 transition-all duration-300 font-chinese"
+                                placeholder="输入延长的分钟数"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -438,24 +572,39 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                           exception.type === 'normal' ? 'bg-yellow-500/10 dark:bg-yellow-500/20 border-yellow-500/20 dark:border-yellow-500/30' :
                           exception.type === 'pause' ? 'bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/20 dark:border-blue-500/30' :
                           exception.type === 'early_complete' ? 'bg-green-500/10 dark:bg-green-500/20 border-green-500/20 dark:border-green-500/30' :
+                          exception.type === 'extend_time' ? 'bg-purple-500/10 dark:bg-purple-500/20 border-purple-500/20 dark:border-purple-500/30' :
+                          exception.type === 'cancel_focus' ? 'bg-red-500/10 dark:bg-red-500/20 border-red-500/20 dark:border-red-500/30' :
                           'bg-gray-500/10 dark:bg-gray-500/20 border-gray-500/20 dark:border-gray-500/30'
                         }`}>
                           <div className="flex items-center justify-between">
-                            <p className={`text-sm font-chinese ${
-                              exception.type === 'normal' ? 'text-yellow-700 dark:text-yellow-300' :
-                              exception.type === 'pause' ? 'text-blue-700 dark:text-blue-300' :
-                              exception.type === 'early_complete' ? 'text-green-700 dark:text-green-300' :
-                              'text-gray-700 dark:text-gray-300'
-                            }`}>{exception.description}</p>
+                            <div>
+                              <p className={`text-sm font-chinese ${
+                                exception.type === 'normal' ? 'text-yellow-700 dark:text-yellow-300' :
+                                exception.type === 'pause' ? 'text-blue-700 dark:text-blue-300' :
+                                exception.type === 'early_complete' ? 'text-green-700 dark:text-green-300' :
+                                exception.type === 'extend_time' ? 'text-purple-700 dark:text-purple-300' :
+                                exception.type === 'cancel_focus' ? 'text-red-700 dark:text-red-300' :
+                                'text-gray-700 dark:text-gray-300'
+                              }`}>{exception.description}</p>
+                              {exception.type === 'extend_time' && exception.extendMinutes && (
+                                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                  延长 {exception.extendMinutes} 分钟
+                                </p>
+                              )}
+                            </div>
                             <span className={`text-xs px-2 py-1 rounded-full ${
                               exception.type === 'normal' ? 'bg-yellow-200 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-200' :
                               exception.type === 'pause' ? 'bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200' :
                               exception.type === 'early_complete' ? 'bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200' :
+                              exception.type === 'extend_time' ? 'bg-purple-200 dark:bg-purple-700 text-purple-800 dark:text-purple-200' :
+                              exception.type === 'cancel_focus' ? 'bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-200' :
                               'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                             }`}>
                               {exception.type === 'normal' ? '普通规则' : 
                                exception.type === 'pause' ? '暂停计时' : 
-                               exception.type === 'early_complete' ? '提前结束' : '未知类型'}
+                               exception.type === 'early_complete' ? '提前结束' :
+                               exception.type === 'extend_time' ? '延长时间' :
+                               exception.type === 'cancel_focus' ? '取消专注' : '未知类型'}
                             </span>
                           </div>
                         </div>
