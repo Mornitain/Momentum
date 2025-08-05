@@ -246,15 +246,24 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1 mr-3">
                               <p className="text-yellow-700 dark:text-yellow-300 text-sm font-chinese mb-2">{exception.description}</p>
+                              {exception.type === 'extend_time' && exception.extendMinutes && (
+                                <p className="text-xs text-purple-600 dark:text-purple-400 mb-2">
+                                  延长 {exception.extendMinutes} 分钟
+                                </p>
+                              )}
                               <span className={`text-xs px-2 py-1 rounded-full inline-block ${
                                 exception.type === 'normal' ? 'bg-yellow-200 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-200' :
                                 exception.type === 'pause' ? 'bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200' :
                                 exception.type === 'early_complete' ? 'bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200' :
+                                exception.type === 'extend_time' ? 'bg-purple-200 dark:bg-purple-700 text-purple-800 dark:text-purple-200' :
+                                exception.type === 'cancel_focus' ? 'bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-200' :
                                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                               }`}>
                                 {exception.type === 'normal' ? '普通规则' : 
                                  exception.type === 'pause' ? '暂停计时' : 
-                                 exception.type === 'early_complete' ? '提前结束' : '未知类型'}
+                                 exception.type === 'early_complete' ? '提前结束' :
+                                 exception.type === 'extend_time' ? '延长时间' :
+                                 exception.type === 'cancel_focus' ? '取消专注' : '未知类型'}
                               </span>
                             </div>
                             <button
