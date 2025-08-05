@@ -276,9 +276,6 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                           
                           {/* 编辑规则类型 */}
                           <div className="pt-3 border-t border-yellow-500/20">
-                            <span className="text-xs text-yellow-600 dark:text-yellow-400 font-chinese mb-2 block">
-                              规则类型：
-                            </span>
                             <div className="flex flex-wrap gap-2">
                               <label className="flex items-center space-x-2 cursor-pointer">
                                 <div className="relative">
@@ -443,7 +440,6 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                           />
                           
                           <div className="flex items-center space-x-4">
-                            <span className="text-sm text-gray-600 dark:text-gray-400 font-chinese">规则类型：</span>
                             <div className="flex flex-wrap gap-2">
                               <label className="flex items-center space-x-2 cursor-pointer">
                                 <div className="relative">

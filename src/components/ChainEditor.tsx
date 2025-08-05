@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Chain } from '../types';
 import { ArrowLeft, Save, Headphones, Code, BookOpen, Dumbbell, Coffee, Target, Clock, Bell } from 'lucide-react';
+import { getCustomTriggersForTemplates, getCustomSignalsForTemplates } from '../utils/customTemplates';
 
 interface ChainEditorProps {
   chain?: Chain;
@@ -52,8 +53,50 @@ const ChainEditor: React.FC<ChainEditorProps> = ({
     chain?.auxiliaryDuration ? !AUXILIARY_DURATION_PRESETS.includes(chain.auxiliaryDuration) : false
   );
   const [auxiliaryCompletionTrigger, setAuxiliaryCompletionTrigger] = useState(
-    chain?.auxiliaryCompletionTrigger || ''
+    chain?.auxiliaryCompletionTrigger || (chain?.trigger || trigger)
   );
+  
+  const [allTriggerTemplates, setAllTriggerTemplates] = useState(TRIGGER_TEMPLATES);
+  const [allSignalTemplates, setAllSignalTemplates] = useState(AUXILIARY_SIGNAL_TEMPLATES);
+
+  // 加载自定义模板
+  useEffect(() => {
+    const updateTemplates = () => {
+      const customTriggers = getCustomTriggersForTemplates();
+      const customSignals = getCustomSignalsForTemplates();
+      
+      // 将自定义模板插入到"自定义"选项之前
+      const triggersWithCustom = [
+        ...TRIGGER_TEMPLATES.slice(0, -1), // 除了最后的"自定义触发器"
+        ...customTriggers,
+        TRIGGER_TEMPLATES[TRIGGER_TEMPLATES.length - 1] // "自定义触发器"
+      ];
+      
+      const signalsWithCustom = [
+        ...AUXILIARY_SIGNAL_TEMPLATES.slice(0, -1), // 除了最后的"自定义信号"
+        ...customSignals,
+        AUXILIARY_SIGNAL_TEMPLATES[AUXILIARY_SIGNAL_TEMPLATES.length - 1] // "自定义信号"
+      ];
+      
+      setAllTriggerTemplates(triggersWithCustom);
+      setAllSignalTemplates(signalsWithCustom);
+    };
+
+    updateTemplates();
+    
+    // 监听设置变化
+    const handleStorageChange = () => updateTemplates();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []); // 组件加载时获取模板
+
+  // 当触发器变化时，更新预约完成条件的默认值
+  useEffect(() => {
+    if (!chain && (!auxiliaryCompletionTrigger || auxiliaryCompletionTrigger === trigger)) {
+      setAuxiliaryCompletionTrigger(trigger);
+    }
+  }, [trigger, chain, auxiliaryCompletionTrigger]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +147,7 @@ const ChainEditor: React.FC<ChainEditorProps> = ({
           >
             <ArrowLeft size={24} />
           </button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-4xl md:text-5xl font-bold font-chinese text-[#161615] dark:text-slate-100 mb-2">
               {isEditing ? '编辑链条' : '创建新链条'}
             </h1>
@@ -167,7 +210,7 @@ const ChainEditor: React.FC<ChainEditorProps> = ({
                   <option value="" disabled className="text-gray-400">
                     选择触发动作
                   </option>
-                  {TRIGGER_TEMPLATES.map((template, index) => (
+                  {allTriggerTemplates.map((template, index) => (
                     <option key={index} value={template.text} className="text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700">
                       {template.text}
                     </option>
@@ -297,7 +340,7 @@ const ChainEditor: React.FC<ChainEditorProps> = ({
                   <option value="" disabled className="text-gray-400">
                     选择预约信号
                   </option>
-                  {AUXILIARY_SIGNAL_TEMPLATES.map((template, index) => (
+                  {allSignalTemplates.map((template, index) => (
                     <option key={index} value={template.text} className="text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700">
                       {template.text}
                     </option>
@@ -414,7 +457,7 @@ const ChainEditor: React.FC<ChainEditorProps> = ({
                   required
                 />
                 <p className="text-gray-500 text-xs mt-3 leading-relaxed">
-                  这是你在预约时间内必须完成的动作，通常就是主链的"神圣座位"触发器
+                  在预约时间内必须完成的动作，默认为主链的"神圣座位"触发器
                 </p>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ActiveSession, Chain, ExceptionRuleType } from '../types';
-import { AlertTriangle, CheckCircle, Play, Pause } from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { formatDuration } from '../utils/time';
 import { showNotification } from '../utils/notifications';
 
@@ -279,31 +279,21 @@ const FocusMode: React.FC<FocusModeProps> = ({
         </div>
 
         {session.isPaused && (
-          <div className="mt-12 p-6 bg-yellow-100 dark:bg-yellow-500/10 backdrop-blur-sm rounded-3xl border border-yellow-300 dark:border-yellow-500/30 max-w-md mx-auto animate-scale-in">
+          <div 
+            onClick={onResume}
+            className="mt-12 p-6 bg-yellow-100 dark:bg-yellow-500/10 backdrop-blur-sm rounded-3xl border border-yellow-300 dark:border-yellow-500/30 max-w-md mx-auto animate-scale-in cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-500/20 transition-all duration-300 hover:scale-105"
+          >
             <div className="flex items-center justify-center space-x-3 mb-2">
               <i className="fas fa-pause text-yellow-600 dark:text-yellow-400 text-xl"></i>
               <p className="text-yellow-700 dark:text-yellow-300 text-xl font-chinese font-medium">任务已暂停</p>
             </div>
-            <p className="text-yellow-600 dark:text-yellow-400 text-sm font-mono">TASK PAUSED - Click to resume</p>
+            <p className="text-yellow-600 dark:text-yellow-400 text-sm font-chinese text-center">点击以继续</p>
           </div>
         )}
       </div>
 
       {/* Control buttons */}
-      <div className="fixed bottom-8 left-8 right-8 flex justify-between items-center">
-        {/* Pause/Resume button */}
-        <button
-          onClick={session.isPaused ? onResume : onPause}
-          className={`px-8 py-4 rounded-3xl font-medium transition-all duration-300 flex items-center space-x-3 border hover:scale-105 shadow-2xl font-chinese ${
-            session.isPaused 
-              ? 'bg-green-500 hover:bg-green-600 text-white border-green-400 hover:border-green-500'
-              : 'bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-400 hover:border-yellow-500'
-          }`}
-        >
-          {session.isPaused ? <Play size={20} /> : <Pause size={20} />}
-          <span>{session.isPaused ? '继续任务' : '暂停任务'}</span>
-        </button>
-
+      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2">
         {/* Interrupt button */}
         <button
           onClick={handleInterruptClick}
@@ -317,23 +307,28 @@ const FocusMode: React.FC<FocusModeProps> = ({
       {/* Interrupt warning modal */}
       {showInterruptWarning && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#161615]/95 backdrop-blur-xl rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700/50 shadow-2xl animate-scale-in">
-            <div className="text-center mb-8">
-              <div className="flex items-center justify-center space-x-3 mb-6">
-                <div className="w-16 h-16 rounded-3xl bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
-                  <AlertTriangle className="text-red-400" size={32} />
+          <div className="bg-white dark:bg-[#161615]/95 backdrop-blur-xl rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700/50 shadow-2xl animate-scale-in flex flex-col">
+            {/* Header */}
+            <div className="p-8 pb-0 flex-shrink-0">
+              <div className="text-center">
+                <div className="flex items-center justify-center space-x-3 mb-6">
+                  <div className="w-16 h-16 rounded-3xl bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
+                    <AlertTriangle className="text-red-400" size={32} />
+                  </div>
+                  <div className="text-left">
+                    <h2 className="text-3xl font-bold font-chinese text-gray-900 dark:text-white mb-1">规则判定</h2>
+                    <p className="text-sm font-mono text-gray-500 dark:text-gray-400 tracking-wider">RULE JUDGMENT</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <h2 className="text-3xl font-bold font-chinese text-gray-900 dark:text-white mb-1">规则判定</h2>
-                  <p className="text-sm font-mono text-gray-500 dark:text-gray-400 tracking-wider">RULE JUDGMENT</p>
-                </div>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed font-chinese">
+                  你似乎做出了与"最好的状态"不符的行为。请描述具体情况并选择处理方式：
+                </p>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed font-chinese">
-                你似乎做出了与"最好的状态"不符的行为。请描述具体情况并选择处理方式：
-              </p>
             </div>
             
-            <div className="mb-8 space-y-6">
+            {/* Content - 可滚动区域 */}
+            <div className="flex-1 overflow-y-auto px-8">
+              <div className="space-y-6">
               {/* 规则类型选择 */}
               {chain.exceptions.length > 0 && (
                 <div className="space-y-4">
@@ -553,69 +548,73 @@ const FocusMode: React.FC<FocusModeProps> = ({
               )}
             </div>
 
-            <div className="space-y-4">
-              <button
-                onClick={handleJudgmentFailure}
-                className="w-full bg-red-500/90 hover:bg-red-500 text-white px-6 py-4 rounded-2xl font-medium transition-all duration-300 hover:scale-105 font-chinese"
-              >
-                <div className="text-left">
-                  <div className="font-bold text-lg">判定失败</div>
-                  <div className="text-sm text-red-200">主链记录将从 #{chain.currentStreak} 清零为 #0</div>
-                </div>
-              </button>
-              
-              <button
-                onClick={handleJudgmentAllow}
-                disabled={useExistingRule ? !selectedExistingRule : !interruptReason.trim()}
-                className={`w-full px-6 py-4 rounded-2xl font-medium transition-all duration-300 disabled:bg-gray-600 disabled:cursor-not-allowed text-white hover:scale-105 font-chinese ${
-                  useExistingRule 
-                    ? 'bg-green-500/90 hover:bg-green-500' 
-                    : getButtonStyleByRuleType(ruleType)
-                }`}
-              >
-                <div className="text-left">
-                  <div className="font-bold text-lg">
-                    {useExistingRule 
-                      ? `使用例外规则 - ${getRuleTypeText(chain.exceptions.find(r => r.id === selectedExistingRule)?.type || 'normal')}` 
-                      : `判定允许（下必为例） - ${getRuleTypeText(ruleType)}`
-                    }
+            {/* Footer - 固定在底部 */}
+            <div className="p-8 pt-4 flex-shrink-0">
+              <div className="space-y-4">
+                <button
+                  onClick={handleJudgmentFailure}
+                  className="w-full bg-red-500/90 hover:bg-red-500 text-white px-6 py-4 rounded-2xl font-medium transition-all duration-300 hover:scale-105 font-chinese"
+                >
+                  <div className="text-left">
+                    <div className="font-bold text-lg">判定失败</div>
+                    <div className="text-sm text-red-200">主链记录将从 #{chain.currentStreak} 清零为 #0</div>
                   </div>
-                  <div className={`text-sm ${useExistingRule ? 'text-green-200' : getButtonTextColorByRuleType(ruleType)}`}>
-                    {useExistingRule 
-                      ? getRuleActionText(chain.exceptions.find(r => r.id === selectedExistingRule)?.type || 'normal')
-                      : `此行为将永久添加到例外规则中 - ${getRuleActionText(ruleType)}`
-                    }
-                  </div>
-                </div>
-              </button>
-              
-              <button
-                onClick={resetInterruptModal}
-                className="w-full bg-gray-200 dark:bg-gray-600/90 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-4 py-3 rounded-2xl font-medium transition-all duration-300 hover:scale-105 font-chinese"
-              >
-                取消 - 继续任务
-              </button>
-            </div>
-            
-            {chain.exceptions.length > 0 && (
-              <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700/50">
-                <h4 className="text-gray-900 dark:text-white font-medium mb-4 flex items-center space-x-2 font-chinese">
-                  <i className="fas fa-list text-primary-500"></i>
-                  <span>当前例外规则：</span>
-                </h4>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {chain.exceptions.map((exception, index) => (
-                    <div key={index} className="text-yellow-600 dark:text-yellow-300 text-sm flex items-center space-x-2">
-                      <i className="fas fa-check-circle text-xs"></i>
-                      <span>{exception.description}</span>
-                      <span className="text-xs px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-                        {getRuleTypeText(exception.type)}
-                      </span>
+                </button>
+                
+                <button
+                  onClick={handleJudgmentAllow}
+                  disabled={useExistingRule ? !selectedExistingRule : !interruptReason.trim()}
+                  className={`w-full px-6 py-4 rounded-2xl font-medium transition-all duration-300 disabled:bg-gray-600 disabled:cursor-not-allowed text-white hover:scale-105 font-chinese ${
+                    useExistingRule 
+                      ? 'bg-green-500/90 hover:bg-green-500' 
+                      : getButtonStyleByRuleType(ruleType)
+                  }`}
+                >
+                  <div className="text-left">
+                    <div className="font-bold text-lg">
+                      {useExistingRule 
+                        ? `使用例外规则 - ${getRuleTypeText(chain.exceptions.find(r => r.id === selectedExistingRule)?.type || 'normal')}` 
+                        : `判定允许（下必为例） - ${getRuleTypeText(ruleType)}`
+                      }
                     </div>
-                  ))}
-                </div>
+                    <div className={`text-sm ${useExistingRule ? 'text-green-200' : getButtonTextColorByRuleType(ruleType)}`}>
+                      {useExistingRule 
+                        ? getRuleActionText(chain.exceptions.find(r => r.id === selectedExistingRule)?.type || 'normal')
+                        : `此行为将永久添加到例外规则中 - ${getRuleActionText(ruleType)}`
+                      }
+                    </div>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={resetInterruptModal}
+                  className="w-full bg-gray-200 dark:bg-gray-600/90 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-4 py-3 rounded-2xl font-medium transition-all duration-300 hover:scale-105 font-chinese"
+                >
+                  取消 - 继续任务
+                </button>
               </div>
-            )}
+              
+              {chain.exceptions.length > 0 && (
+                <div className="mt-6 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700/50">
+                  <h4 className="text-gray-900 dark:text-white font-medium mb-4 flex items-center space-x-2 font-chinese">
+                    <i className="fas fa-list text-primary-500"></i>
+                    <span>当前例外规则：</span>
+                  </h4>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {chain.exceptions.map((exception, index) => (
+                      <div key={index} className="text-yellow-600 dark:text-yellow-300 text-sm flex items-center space-x-2">
+                        <i className="fas fa-check-circle text-xs"></i>
+                        <span>{exception.description}</span>
+                        <span className="text-xs px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                          {getRuleTypeText(exception.type)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            </div>
           </div>
         </div>
       )}

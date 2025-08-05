@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Chain, ScheduledSession } from '../types';
 import ChainCard from './ChainCard';
 import ThemeToggle from './ThemeToggle';
+import Settings from './Settings';
+import { Settings as SettingsIcon } from 'lucide-react';
 
 interface DashboardProps {
   chains: Chain[];
@@ -28,6 +30,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onDeleteChain,
   onExportChain,
 }) => {
+  const [showSettings, setShowSettings] = useState(false);
+
   const getScheduledSession = (chainId: string) => {
     return scheduledSessions.find(session => session.chainId === chainId);
   };
@@ -96,6 +100,13 @@ const Dashboard: React.FC<DashboardProps> = ({
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
                 <button
+                  onClick={() => setShowSettings(true)}
+                  className="w-full sm:w-auto bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-8 py-4 rounded-2xl font-medium transition-all duration-300 flex items-center justify-center space-x-3 hover:scale-105 border border-blue-200 dark:border-blue-700"
+                >
+                  <SettingsIcon size={20} />
+                  <span className="font-chinese font-semibold">自定义设置</span>
+                </button>
+                <button
                   onClick={handleImportClick}
                   className="w-full sm:w-auto bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 px-8 py-4 rounded-2xl font-medium transition-all duration-300 flex items-center justify-center space-x-3 hover:scale-105"
                 >
@@ -124,6 +135,13 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </p>
               </div>
               <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-6 py-3 rounded-2xl font-medium transition-all duration-300 flex items-center space-x-2 hover:scale-105 border border-blue-200 dark:border-blue-700"
+                >
+                  <SettingsIcon size={16} />
+                  <span className="font-chinese font-medium">设置</span>
+                </button>
                 <button
                   onClick={handleImportClick}
                   className="bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-2xl font-medium transition-all duration-300 flex items-center space-x-2 hover:scale-105"
@@ -159,6 +177,11 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
       </div>
+      
+      {/* Settings Modal */}
+      {showSettings && (
+        <Settings onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 };

@@ -57,51 +57,56 @@ const AuxiliaryJudgment: React.FC<AuxiliaryJudgmentProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-slate-600 shadow-2xl animate-scale-in">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-4 mb-6">
-            <div className="w-16 h-16 rounded-3xl bg-blue-500/10 flex items-center justify-center">
-              <Calendar size={32} className="text-blue-500" />
-            </div>
-            <div className="w-16 h-16 rounded-3xl bg-yellow-500/10 flex items-center justify-center">
-              <AlertTriangle size={32} className="text-yellow-500" />
-            </div>
-          </div>
-          <div className="mb-6">
-            <h2 className="text-3xl font-bold font-chinese text-gray-900 dark:text-slate-100 mb-2">辅助链规则判定</h2>
-            <p className="text-sm font-mono text-gray-500 tracking-wider">AUXILIARY CHAIN RULE JUDGMENT</p>
-          </div>
-          <p className="text-gray-600 dark:text-slate-300 mb-6 leading-relaxed font-chinese">
-            你似乎做出了与预约承诺不符的行为。请描述具体情况并选择处理方式：
-          </p>
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-700/50">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-blue-700 dark:text-blue-300">
-              <div className="text-center">
-                <div className="flex items-center justify-center space-x-2 mb-2">
-                  <i className="fas fa-bell text-blue-500"></i>
-                  <span className="font-medium font-chinese">预约信号</span>
-                </div>
-                <p className="font-mono text-sm">{chain.auxiliarySignal}</p>
+      <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-xl w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-slate-600 shadow-2xl animate-scale-in flex flex-col">
+        {/* Header */}
+        <div className="p-6 pb-0 flex-shrink-0">
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-4 mb-6">
+              <div className="w-16 h-16 rounded-3xl bg-blue-500/10 flex items-center justify-center">
+                <Calendar size={32} className="text-blue-500" />
               </div>
-              <div className="text-center">
-                <div className="flex items-center justify-center space-x-2 mb-2">
-                  <i className="fas fa-check-circle text-blue-500"></i>
-                  <span className="font-medium font-chinese">完成条件</span>
-                </div>
-                <p className="font-chinese text-sm">{chain.auxiliaryCompletionTrigger}</p>
+              <div className="w-16 h-16 rounded-3xl bg-yellow-500/10 flex items-center justify-center">
+                <AlertTriangle size={32} className="text-yellow-500" />
               </div>
-              <div className="text-center">
-                <div className="flex items-center justify-center space-x-2 mb-2">
-                  <i className="fas fa-clock text-blue-500"></i>
-                  <span className="font-medium font-chinese">预约时长</span>
+            </div>
+            <div className="mb-6">
+              <h2 className="text-3xl font-bold font-chinese text-gray-900 dark:text-slate-100 mb-2">辅助链规则判定</h2>
+              <p className="text-sm font-mono text-gray-500 tracking-wider">AUXILIARY CHAIN RULE JUDGMENT</p>
+            </div>
+            <p className="text-gray-600 dark:text-slate-300 mb-6 leading-relaxed font-chinese">
+              你似乎做出了与预约承诺不符的行为。请描述具体情况并选择处理方式：
+            </p>
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-700/50">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-blue-700 dark:text-blue-300">
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <i className="fas fa-bell text-blue-500"></i>
+                    <span className="font-medium font-chinese">预约信号</span>
+                  </div>
+                  <p className="font-mono text-sm">{chain.auxiliarySignal}</p>
                 </div>
-                <p className="font-mono text-sm">{chain.auxiliaryDuration}分钟</p>
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <i className="fas fa-check-circle text-blue-500"></i>
+                    <span className="font-medium font-chinese">完成条件</span>
+                  </div>
+                  <p className="font-chinese text-sm">{chain.auxiliaryCompletionTrigger}</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <i className="fas fa-clock text-blue-500"></i>
+                    <span className="font-medium font-chinese">预约时长</span>
+                  </div>
+                  <p className="font-mono text-sm">{chain.auxiliaryDuration}分钟</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        
-        <div className="mb-8 space-y-6">
+
+        {/* Content - 可滚动区域 */}
+        <div className="flex-1 overflow-y-auto px-6">
+          <div className="space-y-6">
           {/* 规则类型选择 */}
           {chain.auxiliaryExceptions && chain.auxiliaryExceptions.length > 0 && (
             <div className="space-y-4">
@@ -179,64 +184,68 @@ const AuxiliaryJudgment: React.FC<AuxiliaryJudgmentProps> = ({
             </div>
           )}
         </div>
-
-        <div className="space-y-3">
-          <button
-            onClick={() => onJudgmentFailure(reason || '用户主动中断预约')}
-            className="w-full bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-2xl font-medium transition-all duration-300 hover:scale-105 shadow-lg font-chinese"
-          >
-            <div className="text-left">
-              <div className="font-bold text-lg">判定失败</div>
-              <div className="text-sm text-red-200">
-                辅助链记录将从 #{chain.auxiliaryStreak} 清零为 #0
-              </div>
-            </div>
-          </button>
-          
-          <button
-            onClick={handleJudgmentAllowClick}
-            disabled={useExistingRule ? !selectedExistingRule : !reason.trim()}
-            className={`w-full px-6 py-3 rounded-2xl font-medium transition-all duration-300 disabled:bg-gray-300 disabled:cursor-not-allowed text-white hover:scale-105 shadow-lg font-chinese ${
-              useExistingRule 
-                ? 'bg-green-500 hover:bg-green-600' 
-                : 'bg-yellow-500 hover:bg-yellow-600'
-            }`}
-          >
-            <div className="text-left">
-              <div className="font-bold text-lg">判定允许（下必为例）</div>
-              <div className={`text-sm ${useExistingRule ? 'text-green-200' : 'text-yellow-200'}`}>
-                {useExistingRule 
-                  ? '根据已有规则，此行为被允许' 
-                  : '此情况将永久添加到辅助链例外规则中'
-                }
-              </div>
-            </div>
-          </button>
-          
-          <button
-            onClick={onCancel}
-            className="w-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-900 dark:text-slate-100 px-4 py-2 rounded-2xl font-medium transition-all duration-300 hover:scale-105 font-chinese"
-          >
-            取消 - 继续预约
-          </button>
         </div>
-        
-        {chain.auxiliaryExceptions && chain.auxiliaryExceptions.length > 0 && (
-          <div className="mt-4 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-2xl border border-gray-200 dark:border-slate-600">
-            <h4 className="text-gray-900 dark:text-slate-100 font-medium mb-4 flex items-center space-x-2 font-chinese">
-              <i className="fas fa-list text-blue-500"></i>
-              <span>当前辅助链例外规则：</span>
-            </h4>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {[...new Set(chain.auxiliaryExceptions)].map((exception, index) => (
-                <div key={index} className="text-blue-600 dark:text-blue-400 text-sm flex items-center space-x-2">
-                  <i className="fas fa-check-circle text-xs"></i>
-                  <span className="font-chinese">{exception}</span>
+
+        {/* Footer - 固定在底部 */}
+        <div className="p-6 pt-4 flex-shrink-0">
+          <div className="space-y-3">
+            <button
+              onClick={() => onJudgmentFailure(reason || '用户主动中断预约')}
+              className="w-full bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-2xl font-medium transition-all duration-300 hover:scale-105 shadow-lg font-chinese"
+            >
+              <div className="text-left">
+                <div className="font-bold text-lg">判定失败</div>
+                <div className="text-sm text-red-200">
+                  辅助链记录将从 #{chain.auxiliaryStreak} 清零为 #0
                 </div>
-              ))}
-            </div>
+              </div>
+            </button>
+            
+            <button
+              onClick={handleJudgmentAllowClick}
+              disabled={useExistingRule ? !selectedExistingRule : !reason.trim()}
+              className={`w-full px-6 py-3 rounded-2xl font-medium transition-all duration-300 disabled:bg-gray-300 disabled:cursor-not-allowed text-white hover:scale-105 shadow-lg font-chinese ${
+                useExistingRule 
+                  ? 'bg-green-500 hover:bg-green-600' 
+                  : 'bg-yellow-500 hover:bg-yellow-600'
+              }`}
+            >
+              <div className="text-left">
+                <div className="font-bold text-lg">判定允许（下必为例）</div>
+                <div className={`text-sm ${useExistingRule ? 'text-green-200' : 'text-yellow-200'}`}>
+                  {useExistingRule 
+                    ? '根据已有规则，此行为被允许' 
+                    : '此情况将永久添加到辅助链例外规则中'
+                  }
+                </div>
+              </div>
+            </button>
+            
+            <button
+              onClick={onCancel}
+              className="w-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-900 dark:text-slate-100 px-4 py-2 rounded-2xl font-medium transition-all duration-300 hover:scale-105 font-chinese"
+            >
+              取消 - 继续预约
+            </button>
           </div>
-        )}
+          
+          {chain.auxiliaryExceptions && chain.auxiliaryExceptions.length > 0 && (
+            <div className="mt-4 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-2xl border border-gray-200 dark:border-slate-600">
+              <h4 className="text-gray-900 dark:text-slate-100 font-medium mb-4 flex items-center space-x-2 font-chinese">
+                <i className="fas fa-list text-blue-500"></i>
+                <span>当前辅助链例外规则：</span>
+              </h4>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {[...new Set(chain.auxiliaryExceptions)].map((exception, index) => (
+                  <div key={index} className="text-blue-600 dark:text-blue-400 text-sm flex items-center space-x-2">
+                    <i className="fas fa-check-circle text-xs"></i>
+                    <span className="font-chinese">{exception}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
