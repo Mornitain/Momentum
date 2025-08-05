@@ -335,6 +335,8 @@ function App() {
       duration: chain.duration,
       isPaused: false,
       totalPausedTime: 0,
+      ruleEffects: [], // 初始化规则效果记录
+      originalDuration: chain.duration, // 保存原始时长
     };
 
     // Remove any scheduled session for this chain
@@ -361,11 +363,19 @@ function App() {
     const chain = state.chains.find(c => c.id === state.activeSession!.chainId);
     if (!chain) return;
 
+    // 计算实际专注时长（排除暂停时间，精确到秒）
+    const sessionEndTime = Date.now();
+    const totalElapsedTime = sessionEndTime - state.activeSession.startedAt.getTime();
+    const actualFocusTime = Math.max(0, totalElapsedTime - state.activeSession.totalPausedTime);
+    const actualFocusTimeSeconds = Math.floor(actualFocusTime / 1000);
+
     const completionRecord: CompletionHistory = {
       chainId: chain.id,
       completedAt: new Date(),
-      duration: state.activeSession.duration,
+      duration: state.activeSession.originalDuration || state.activeSession.duration, // 使用原始设定时长
+      actualFocusTime: actualFocusTimeSeconds, // 实际专注时长（秒）
       wasSuccessful: true,
+      ruleEffects: state.activeSession.ruleEffects || [], // 记录规则效果
     };
 
     setState(prev => {
@@ -402,12 +412,20 @@ function App() {
     const chain = state.chains.find(c => c.id === state.activeSession!.chainId);
     if (!chain) return;
 
+    // 计算实际专注时长（失败情况下仍记录实际时长）
+    const sessionEndTime = Date.now();
+    const totalElapsedTime = sessionEndTime - state.activeSession.startedAt.getTime();
+    const actualFocusTime = Math.max(0, totalElapsedTime - state.activeSession.totalPausedTime);
+    const actualFocusTimeSeconds = Math.floor(actualFocusTime / 1000);
+
     const completionRecord: CompletionHistory = {
       chainId: chain.id,
       completedAt: new Date(),
-      duration: state.activeSession.duration,
+      duration: state.activeSession.originalDuration || state.activeSession.duration,
+      actualFocusTime: actualFocusTimeSeconds,
       wasSuccessful: false,
       reasonForFailure: reason || '用户主动中断',
+      ruleEffects: state.activeSession.ruleEffects || [],
     };
 
     setState(prev => {

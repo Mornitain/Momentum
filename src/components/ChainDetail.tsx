@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Chain, CompletionHistory, ExceptionRule, ExceptionRuleType } from '../types';
 import { ArrowLeft, Flame, CheckCircle, XCircle, Calendar, Clock, AlertCircle, Trash2, Edit, Plus, X } from 'lucide-react';
-import { formatTime } from '../utils/time';
+import { formatTime, formatFocusTimeCompact } from '../utils/time';
 
 interface ChainDetailProps {
   chain: Chain;
@@ -732,6 +732,9 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                         <div>
                           <p className="text-[#161615] dark:text-slate-100 font-medium font-chinese text-lg">
                             {record.wasSuccessful ? '任务完成' : '任务失败'}
+                          </p>
+                          <p className="text-gray-500 dark:text-slate-400 text-sm">
+                            实际专注: {record.actualFocusTime ? formatFocusTimeCompact(record.actualFocusTime) : formatTime(record.duration)}
                           </p>
                           {!record.wasSuccessful && record.reasonForFailure && (
                             <p className="text-red-500 dark:text-red-400 text-sm font-chinese mt-1">{record.reasonForFailure}</p>

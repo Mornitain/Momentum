@@ -43,14 +43,25 @@ export interface ActiveSession {
   isPaused: boolean;
   pausedAt?: Date;
   totalPausedTime: number;
+  ruleEffects: ExceptionRuleEffect[]; // 记录所有规则生效历史
+  originalDuration: number; // 保存原始设定时长（分钟）
 }
 
 export interface CompletionHistory {
   chainId: string;
   completedAt: Date;
-  duration: number;
+  duration: number; // 原设定时长（分钟）
+  actualFocusTime: number; // 实际专注时长（秒），精确到秒
   wasSuccessful: boolean;
   reasonForFailure?: string;
+  ruleEffects?: ExceptionRuleEffect[]; // 记录生效的例外规则影响
+}
+
+export interface ExceptionRuleEffect {
+  ruleType: ExceptionRuleType;
+  description: string;
+  appliedAt: Date; // 规则生效时间
+  timeImpact?: number; // 时间影响（秒），暂停为负数，延长为正数
 }
 
 export type ViewState = 'dashboard' | 'editor' | 'focus' | 'detail';

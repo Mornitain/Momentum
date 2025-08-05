@@ -14,6 +14,7 @@ interface FocusModeProps {
   onResume: () => void;
   onExtendTime: (minutes: number) => void;
   onCancelFocus: () => void;
+  onEarlyComplete?: () => void; // 新增提前完成回调
 }
 
 const FocusMode: React.FC<FocusModeProps> = ({
@@ -26,6 +27,7 @@ const FocusMode: React.FC<FocusModeProps> = ({
   onResume,
   onExtendTime,
   onCancelFocus,
+  onEarlyComplete,
 }) => {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [showInterruptWarning, setShowInterruptWarning] = useState(false);
@@ -127,7 +129,12 @@ const FocusMode: React.FC<FocusModeProps> = ({
         showNotification('任务已暂停', '根据例外规则，任务计时已暂停');
         break;
       case 'early_complete':
-        onComplete();
+        // 提前完成使用专门的回调，确保记录实际时长
+        if (onEarlyComplete) {
+          onEarlyComplete();
+        } else {
+          onComplete(); // 兜底
+        }
         showNotification('任务提前完成', '根据例外规则，任务已提前结束');
         break;
       case 'extend_time':
@@ -272,11 +279,52 @@ const FocusMode: React.FC<FocusModeProps> = ({
               </span>
             </div>
             <div className="flex items-center space-x-2">
+              <i className="fas fa-stopwatch text-primary-500"></i>
+              <span className="font-mono text-green-500">
+                实际: {Math.floor(((Date.now() - session.startedAt.getTime() - session.totalPausedTime) / 1000) / 60)}分
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
               <i className="fas fa-fire text-primary-500"></i>
               <span className="font-mono">#{chain.currentStreak}</span>
             </div>
           </div>
         </div>
+
+          {/* 规则效果显示 */}
+          {session.ruleEffects && session.ruleEffects.length > 0 && (
+            <div className="mt-8">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 max-w-md mx-auto">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 font-chinese">
+                  已生效规则
+                </h4>
+                <div className="space-y-2">
+                  {session.ruleEffects.slice(-3).map((effect, index) => (
+                    <div key={index} className="flex items-center justify-between text-xs">
+                      <span className={`px-2 py-1 rounded-full ${
+                        effect.ruleType === 'pause' ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300' :
+                        effect.ruleType === 'early_complete' ? 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300' :
+                        effect.ruleType === 'extend_time' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' :
+                        effect.ruleType === 'cancel_focus' ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300' :
+                        'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300'
+                      }`}>
+                        {effect.ruleType === 'pause' ? '暂停' :
+                         effect.ruleType === 'early_complete' ? '提前完成' :
+                         effect.ruleType === 'extend_time' ? `延长${Math.floor((effect.timeImpact || 0) / 60)}分` :
+                         effect.ruleType === 'cancel_focus' ? '取消' : '普通'}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400 font-mono">
+                        {effect.appliedAt.toLocaleTimeString('zh-CN', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
         {session.isPaused && (
           <div 

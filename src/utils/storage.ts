@@ -68,6 +68,9 @@ export const storage = {
       ...session,
       startedAt: new Date(session.startedAt),
       pausedAt: session.pausedAt ? new Date(session.pausedAt) : undefined,
+      // 向后兼容：为旧数据添加新字段
+      ruleEffects: session.ruleEffects || [],
+      originalDuration: session.originalDuration || session.duration,
     };
   },
 
@@ -82,9 +85,12 @@ export const storage = {
   getCompletionHistory: (): CompletionHistory[] => {
     const data = localStorage.getItem(STORAGE_KEYS.COMPLETION_HISTORY);
     if (!data) return [];
-    return JSON.parse(data).map((history: Partial<CompletionHistory>) => ({
+    return JSON.parse(data).map((history: any) => ({
       ...history,
       completedAt: new Date(history.completedAt!),
+      // 向后兼容：为旧数据添加新字段
+      actualFocusTime: history.actualFocusTime || (history.duration * 60), // 旧数据假设完整完成
+      ruleEffects: history.ruleEffects || [],
     }));
   },
 
