@@ -16,7 +16,27 @@ export const storage = {
       auxiliaryStreak: chain.auxiliaryStreak || 0,
       auxiliaryFailures: chain.auxiliaryFailures || 0,
       auxiliaryExceptions: chain.auxiliaryExceptions || [],
-      createdAt: new Date(chain.createdAt),
+      // 数据迁移：将旧的string[]格式转换为ExceptionRule[]格式
+      exceptions: Array.isArray(chain.exceptions) 
+        ? chain.exceptions.map((ex: any) => {
+            if (typeof ex === 'string') {
+              // 旧格式：string[]
+              return {
+                id: `migrated_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                description: ex,
+                type: 'normal',
+                createdAt: new Date()
+              };
+            } else {
+              // 新格式：ExceptionRule[]
+              return {
+                ...ex,
+                createdAt: new Date(ex.createdAt)
+              };
+            }
+          })
+        : [],
+      createdAt: new Date(chain.createdAt!),
       lastCompletedAt: chain.lastCompletedAt ? new Date(chain.lastCompletedAt) : undefined,
     }));
   },
@@ -28,11 +48,11 @@ export const storage = {
   getScheduledSessions: (): ScheduledSession[] => {
     const data = localStorage.getItem(STORAGE_KEYS.SCHEDULED_SESSIONS);
     if (!data) return [];
-    return JSON.parse(data).map((session: any) => ({
+    return JSON.parse(data).map((session: Partial<ScheduledSession>) => ({
       ...session,
       auxiliarySignal: session.auxiliarySignal || '预约信号',
-      scheduledAt: new Date(session.scheduledAt),
-      expiresAt: new Date(session.expiresAt),
+      scheduledAt: new Date(session.scheduledAt!),
+      expiresAt: new Date(session.expiresAt!),
     }));
   },
 
@@ -62,9 +82,9 @@ export const storage = {
   getCompletionHistory: (): CompletionHistory[] => {
     const data = localStorage.getItem(STORAGE_KEYS.COMPLETION_HISTORY);
     if (!data) return [];
-    return JSON.parse(data).map((history: any) => ({
+    return JSON.parse(data).map((history: Partial<CompletionHistory>) => ({
       ...history,
-      completedAt: new Date(history.completedAt),
+      completedAt: new Date(history.completedAt!),
     }));
   },
 

@@ -9,7 +9,7 @@ interface AuxiliaryJudgmentProps {
   onCancel: () => void;
 }
 
-export const AuxiliaryJudgment: React.FC<AuxiliaryJudgmentProps> = ({
+const AuxiliaryJudgment: React.FC<AuxiliaryJudgmentProps> = ({
   chain,
   onJudgmentFailure,
   onJudgmentAllow,
@@ -39,15 +39,18 @@ export const AuxiliaryJudgment: React.FC<AuxiliaryJudgmentProps> = ({
   const handleJudgmentAllowClick = () => {
     const ruleToAdd = useExistingRule ? selectedExistingRule : reason.trim();
     if (ruleToAdd) {
-      // 只有在使用新规则且不存在时才添加
-      if (!useExistingRule && !chain.auxiliaryExceptions?.includes(ruleToAdd)) {
+      // 使用Set去重，确保不会重复添加规则
+      const existingRules = new Set(chain.auxiliaryExceptions || []);
+      
+      if (!useExistingRule && !existingRules.has(ruleToAdd)) {
+        // 添加新规则
         onJudgmentAllow(ruleToAdd);
       } else if (useExistingRule) {
-        // 使用已有规则，不需要添加新规则，直接允许
-        onJudgmentAllow(selectedExistingRule);
+        // 使用已有规则，直接允许，不需要添加新规则
+        onJudgmentAllow(''); // 传递空字符串表示使用已有规则
       } else {
         // 规则已存在，仍然调用允许函数但不会重复添加
-        onJudgmentAllow(ruleToAdd);
+        onJudgmentAllow('');
       }
     }
   };
@@ -238,3 +241,5 @@ export const AuxiliaryJudgment: React.FC<AuxiliaryJudgmentProps> = ({
     </div>
   );
 };
+
+export default AuxiliaryJudgment;

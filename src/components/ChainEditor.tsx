@@ -29,7 +29,7 @@ const AUXILIARY_SIGNAL_TEMPLATES = [
 const AUXILIARY_DURATION_PRESETS = [5, 10, 15, 20, 30, 45];
 const DURATION_PRESETS = [25, 30, 45, 60, 90, 120];
 
-export const ChainEditor: React.FC<ChainEditorProps> = ({
+const ChainEditor: React.FC<ChainEditorProps> = ({
   chain,
   isEditing,
   onSave,
@@ -463,3 +463,5 @@ export const ChainEditor: React.FC<ChainEditorProps> = ({
     </div>
   );
 };
+
+export default ChainEditor;

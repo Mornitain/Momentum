@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { AppState, Chain, ScheduledSession, ActiveSession, CompletionHistory } from './types';
-import { Dashboard } from './components/Dashboard';
-import { AuthWrapper } from './components/AuthWrapper';
-import { ChainEditor } from './components/ChainEditor';
-import { FocusMode } from './components/FocusMode';
-import { ChainDetail } from './components/ChainDetail';
-import { AuxiliaryJudgment } from './components/AuxiliaryJudgment';
+import { useState, useEffect } from 'react';
+import { AppState, Chain, ScheduledSession, ActiveSession, CompletionHistory, ExceptionRuleType, ExceptionRule } from './types';
+import Dashboard from './components/Dashboard';
+import AuthWrapper from './components/AuthWrapper';
+import ChainEditor from './components/ChainEditor';
+import FocusMode from './components/FocusMode';
+import ChainDetail from './components/ChainDetail';
+import AuxiliaryJudgment from './components/AuxiliaryJudgment';
 import { storage as localStorageUtils } from './utils/storage';
 import { supabaseStorage } from './utils/supabaseStorage';
 import { getCurrentUser, isSupabaseConfigured } from './lib/supabase';
@@ -25,7 +25,7 @@ function App() {
   const [showAuxiliaryJudgment, setShowAuxiliaryJudgment] = useState<string | null>(null);
 
   // Determine which storage to use based on authentication
-  const [storage, setStorage] = useState(localStorageUtils);
+  const [storage, setStorage] = useState<typeof localStorageUtils | typeof supabaseStorage>(localStorageUtils);
 
   // Check if user is authenticated and switch to Supabase storage
   useEffect(() => {
@@ -87,7 +87,7 @@ function App() {
           </>
         );
 
-      case 'focus':
+      case 'focus': {
         const activeChain = state.chains.find(c => c.id === state.activeSession?.chainId);
         if (!state.activeSession || !activeChain) {
           handleBackToDashboard();
@@ -114,8 +114,9 @@ function App() {
             )}
           </>
         );
+      }
 
-      case 'detail':
+      case 'detail': {
         const viewingChain = state.chains.find(c => c.id === state.viewingChainId);
         if (!viewingChain) {
           handleBackToDashboard();
@@ -129,6 +130,7 @@ function App() {
               onBack={handleBackToDashboard}
               onEdit={() => handleEditChain(viewingChain.id)}
               onDelete={() => handleDeleteChain(viewingChain.id)}
+              onUpdateExceptions={handleUpdateExceptions}
             />
             {showAuxiliaryJudgment && (
               <AuxiliaryJudgment
@@ -140,6 +142,7 @@ function App() {
             )}
           </>
         );
+      }
 
       default:
         return (
@@ -176,7 +179,7 @@ function App() {
         const chains = await storage.getChains();
         const allScheduledSessions = await storage.getScheduledSessions();
         const scheduledSessions = allScheduledSessions.filter(
-          session => !isSessionExpired(session.expiresAt)
+          (session: ScheduledSession) => !isSessionExpired(session.expiresAt)
         );
         const activeSession = await storage.getActiveSession();
         const completionHistory = await storage.getCompletionHistory();
@@ -432,7 +435,7 @@ function App() {
     });
   };
 
-  const handlePauseSession = () => {
+  const handlePauseSession = async () => {
     if (!state.activeSession) return;
 
     setState(prev => {
@@ -442,6 +445,7 @@ function App() {
         pausedAt: new Date(),
       };
       
+      // 异步保存但不阻塞UI更新
       storage.saveActiveSession(updatedSession);
       
       return {
@@ -451,7 +455,7 @@ function App() {
     });
   };
 
-  const handleResumeSession = () => {
+  const handleResumeSession = async () => {
     if (!state.activeSession || !state.activeSession.pausedAt) return;
 
     setState(prev => {
@@ -463,6 +467,7 @@ function App() {
         totalPausedTime: prev.activeSession!.totalPausedTime + pauseDuration,
       };
       
+      // 异步保存但不阻塞UI更新
       storage.saveActiveSession(updatedSession);
       
       return {
@@ -473,6 +478,7 @@ function App() {
   };
 
   const handleAuxiliaryJudgmentFailure = (chainId: string, reason: string) => {
+    console.log('Auxiliary judgment failure reason:', reason); // 记录失败原因用于调试
     setState(prev => {
       // Remove the scheduled session
       const updatedScheduledSessions = prev.scheduledSessions.filter(
@@ -535,7 +541,7 @@ function App() {
     setShowAuxiliaryJudgment(chainId);
   };
 
-  const handleAddException = (exceptionRule: string) => {
+  const handleAddException = (exceptionRule: { description: string; type: ExceptionRuleType }) => {
     if (!state.activeSession) return;
 
     setState(prev => {
@@ -543,7 +549,33 @@ function App() {
         chain.id === prev.activeSession!.chainId
           ? {
               ...chain,
-              exceptions: [...(chain.exceptions || []), exceptionRule]
+              exceptions: [...(chain.exceptions || []), {
+                id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                description: exceptionRule.description,
+                type: exceptionRule.type,
+                createdAt: new Date()
+              }]
+            }
+          : chain
+      );
+      
+      storage.saveChains(updatedChains);
+      
+      return {
+        ...prev,
+        chains: updatedChains,
+      };
+    });
+  };
+
+  const handleUpdateExceptions = (chainId: string, exceptions: ExceptionRule[], auxiliaryExceptions: string[]) => {
+    setState(prev => {
+      const updatedChains = prev.chains.map(chain =>
+        chain.id === chainId
+          ? {
+              ...chain,
+              exceptions,
+              auxiliaryExceptions
             }
           : chain
       );

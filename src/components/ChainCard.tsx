@@ -15,7 +15,7 @@ interface ChainCardProps {
   onExport: (chainId: string) => void;
 }
 
-export const ChainCard: React.FC<ChainCardProps> = ({
+const ChainCard: React.FC<ChainCardProps> = ({
   chain,
   scheduledSession,
   onStartChain,
@@ -41,7 +41,6 @@ export const ChainCard: React.FC<ChainCardProps> = ({
     const totalDurationInSeconds = chain.auxiliaryDuration * 60;
     // 当剩下不到三分之一时间时通知（如果总时间大于15分钟则固定为5分钟）
     const warningThresholdInSeconds = totalDurationInSeconds > 900 ? 300 : totalDurationInSeconds / 3;
-    const warningTimeInMinutes = Math.ceil(warningThresholdInSeconds / 60);
 
     const updateTimer = () => {
       const remaining = getTimeRemaining(scheduledSession.expiresAt);
@@ -313,3 +312,5 @@ export const ChainCard: React.FC<ChainCardProps> = ({
     </div>
   );
 };
+
+export default ChainCard;

@@ -9,7 +9,7 @@ interface AccessibilityAnnouncerProps {
 /**
  * Component for announcing theme changes to screen readers
  */
-export const AccessibilityAnnouncer: React.FC<AccessibilityAnnouncerProps> = ({
+const AccessibilityAnnouncer: React.FC<AccessibilityAnnouncerProps> = ({
   message,
   priority = 'polite',
   onAnnounced,
@@ -68,3 +68,5 @@ export const useThemeAnnouncer = () => {
     clearAnnouncement,
   };
 };
+
+export default AccessibilityAnnouncer;

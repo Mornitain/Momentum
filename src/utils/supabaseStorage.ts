@@ -29,7 +29,26 @@ export class SupabaseStorage {
       totalCompletions: chain.total_completions,
       totalFailures: chain.total_failures,
       auxiliaryFailures: chain.auxiliary_failures,
-      exceptions: Array.isArray(chain.exceptions) ? chain.exceptions as string[] : [],
+      // 数据迁移：支持旧格式string[]和新格式ExceptionRule[]
+      exceptions: Array.isArray(chain.exceptions) 
+        ? (chain.exceptions as any[]).map((ex: any) => {
+            if (typeof ex === 'string') {
+              // 旧格式：string[]
+              return {
+                id: `migrated_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                description: ex,
+                type: 'normal',
+                createdAt: new Date()
+              };
+            } else {
+              // 新格式：ExceptionRule[]
+              return {
+                ...ex,
+                createdAt: new Date(ex.createdAt)
+              };
+            }
+          })
+        : [],
       auxiliaryExceptions: Array.isArray(chain.auxiliary_exceptions) ? chain.auxiliary_exceptions as string[] : [],
       auxiliarySignal: chain.auxiliary_signal,
       auxiliaryDuration: chain.auxiliary_duration,
@@ -68,8 +87,8 @@ export class SupabaseStorage {
           total_completions: chain.totalCompletions,
           total_failures: chain.totalFailures,
           auxiliary_failures: chain.auxiliaryFailures,
-          exceptions: chain.exceptions,
-          auxiliary_exceptions: chain.auxiliaryExceptions,
+          exceptions: Array.from(new Set(chain.exceptions)), // Remove duplicates
+          auxiliary_exceptions: Array.from(new Set(chain.auxiliaryExceptions || [])), // Remove duplicates
           auxiliary_signal: chain.auxiliarySignal,
           auxiliary_duration: chain.auxiliaryDuration,
           auxiliary_completion_trigger: chain.auxiliaryCompletionTrigger,
@@ -97,8 +116,8 @@ export class SupabaseStorage {
           total_completions: chain.totalCompletions,
           total_failures: chain.totalFailures,
           auxiliary_failures: chain.auxiliaryFailures,
-          exceptions: chain.exceptions,
-          auxiliary_exceptions: chain.auxiliaryExceptions,
+          exceptions: Array.from(new Set(chain.exceptions)), // Remove duplicates
+          auxiliary_exceptions: Array.from(new Set(chain.auxiliaryExceptions || [])), // Remove duplicates
           auxiliary_signal: chain.auxiliarySignal,
           auxiliary_duration: chain.auxiliaryDuration,
           auxiliary_completion_trigger: chain.auxiliaryCompletionTrigger,

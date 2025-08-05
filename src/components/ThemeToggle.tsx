@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Sun, Moon, Monitor, Check } from 'lucide-react';
 import { useDarkMode } from '../hooks/useDarkMode';
-import { AccessibilityAnnouncer, useThemeAnnouncer } from './AccessibilityAnnouncer';
+import AccessibilityAnnouncer, { useThemeAnnouncer } from './AccessibilityAnnouncer';
 
 interface ThemeToggleProps {
   className?: string;
@@ -9,7 +9,7 @@ interface ThemeToggleProps {
   variant?: 'button' | 'dropdown';
 }
 
-export const ThemeToggle: React.FC<ThemeToggleProps> = ({
+const ThemeToggle: React.FC<ThemeToggleProps> = ({
   className = '',
   showLabel = false,
   variant = 'button'
@@ -162,3 +162,5 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
     </>
   );
 };
+
+export default ThemeToggle;

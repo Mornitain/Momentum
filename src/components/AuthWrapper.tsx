@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { AuthForm } from './AuthForm';
+import AuthForm from './AuthForm';
 import { Loader2 } from 'lucide-react';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
 }
 
-export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
+const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -21,7 +25,7 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         setUser(session?.user ?? null);
         setLoading(false);
       }
@@ -48,9 +52,11 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
     );
   }
 
-  if (!user) {
+  if (!user && supabase) {
     return <AuthForm />;
   }
 
   return <>{children}</>;
 };
+
+export default AuthWrapper;

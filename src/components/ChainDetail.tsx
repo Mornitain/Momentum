@@ -1,6 +1,6 @@
-import React from 'react';
-import { Chain, CompletionHistory } from '../types';
-import { ArrowLeft, Flame, CheckCircle, XCircle, Calendar, Clock, AlertCircle, Trash2, Edit } from 'lucide-react';
+import React, { useState } from 'react';
+import { Chain, CompletionHistory, ExceptionRule, ExceptionRuleType } from '../types';
+import { ArrowLeft, Flame, CheckCircle, XCircle, Calendar, Clock, AlertCircle, Trash2, Edit, Plus, X } from 'lucide-react';
 import { formatTime } from '../utils/time';
 
 interface ChainDetailProps {
@@ -9,22 +9,79 @@ interface ChainDetailProps {
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onUpdateExceptions: (chainId: string, exceptions: ExceptionRule[], auxiliaryExceptions: string[]) => void;
 }
 
-export const ChainDetail: React.FC<ChainDetailProps> = ({
+const ChainDetail: React.FC<ChainDetailProps> = ({
   chain,
   history,
   onBack,
   onEdit,
   onDelete,
+  onUpdateExceptions,
 }) => {
   const chainHistory = history.filter(h => h.chainId === chain.id);
   const recentHistory = chainHistory.slice(-10).reverse();
-  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingRules, setEditingRules] = useState(false);
+  const [editingExceptions, setEditingExceptions] = useState<ExceptionRule[]>([...chain.exceptions]);
+  const [editingAuxiliaryExceptions, setEditingAuxiliaryExceptions] = useState([...chain.auxiliaryExceptions || []]);
+  const [newException, setNewException] = useState('');
+  const [newExceptionType, setNewExceptionType] = useState<ExceptionRuleType>('normal');
+  const [newAuxiliaryException, setNewAuxiliaryException] = useState('');
 
   const successRate = chain.totalCompletions > 0 
     ? Math.round((chain.totalCompletions / (chain.totalCompletions + chain.totalFailures)) * 100)
     : 0;
+
+  const handleDeleteException = (index: number, isAuxiliary: boolean = false) => {
+    if (isAuxiliary) {
+      const updated = editingAuxiliaryExceptions.filter((_, i) => i !== index);
+      setEditingAuxiliaryExceptions(updated);
+    } else {
+      const updated = editingExceptions.filter((_, i) => i !== index);
+      setEditingExceptions(updated);
+    }
+  };
+
+  const handleAddException = (isAuxiliary: boolean = false) => {
+    const newRule = isAuxiliary ? newAuxiliaryException.trim() : newException.trim();
+    if (!newRule) return;
+
+    if (isAuxiliary) {
+      if (!editingAuxiliaryExceptions.includes(newRule)) {
+        setEditingAuxiliaryExceptions([...editingAuxiliaryExceptions, newRule]);
+        setNewAuxiliaryException('');
+      }
+    } else {
+      // 检查是否已存在相同描述的规则
+      const exists = editingExceptions.some(rule => rule.description === newRule);
+      if (!exists) {
+        const newExceptionRule: ExceptionRule = {
+          id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          description: newRule,
+          type: newExceptionType,
+          createdAt: new Date()
+        };
+        setEditingExceptions([...editingExceptions, newExceptionRule]);
+        setNewException('');
+        setNewExceptionType('normal');
+      }
+    }
+  };
+
+  const handleSaveRules = () => {
+    onUpdateExceptions(chain.id, editingExceptions, editingAuxiliaryExceptions);
+    setEditingRules(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingExceptions([...chain.exceptions]);
+    setEditingAuxiliaryExceptions([...chain.auxiliaryExceptions || []]);
+    setNewException('');
+    setNewAuxiliaryException('');
+    setEditingRules(false);
+  };
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
@@ -131,49 +188,337 @@ export const ChainDetail: React.FC<ChainDetailProps> = ({
             </div>
 
             {/* Exceptions */}
-            {(chain.exceptions.length > 0 || chain.auxiliaryExceptions.length > 0) && (
+            {(chain.exceptions.length > 0 || chain.auxiliaryExceptions.length > 0 || editingRules) && (
               <div className="bento-card animate-scale-in">
-                <h3 className="text-xl font-bold font-chinese text-[#161615] dark:text-slate-100 mb-6 flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
-                    <AlertCircle size={20} className="text-yellow-500" />
-                  </div>
-                  <div>
-                    <span>规则手册</span>
-                    <p className="text-xs font-mono text-gray-500 dark:text-slate-400 tracking-wide">RULE HANDBOOK</p>
-                  </div>
-                </h3>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold font-chinese text-[#161615] dark:text-slate-100 flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
+                      <AlertCircle size={20} className="text-yellow-500" />
+                    </div>
+                    <div>
+                      <span>规则手册</span>
+                      <p className="text-xs font-mono text-gray-500 dark:text-slate-400 tracking-wide">RULE HANDBOOK</p>
+                    </div>
+                  </h3>
+                  
+                  {!editingRules ? (
+                    <button
+                      onClick={() => setEditingRules(true)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 hover:scale-105 text-sm font-chinese"
+                    >
+                      <Edit size={14} />
+                      <span>编辑规则</span>
+                    </button>
+                  ) : (
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleSaveRules}
+                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 hover:scale-105 text-sm font-chinese"
+                      >
+                        <CheckCircle size={14} />
+                        <span>保存</span>
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 hover:scale-105 text-sm font-chinese"
+                      >
+                        <X size={14} />
+                        <span>取消</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
                 
-                {chain.exceptions.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-[#161615] dark:text-slate-100 font-medium mb-3 font-chinese flex items-center space-x-2">
-                      <i className="fas fa-fire text-primary-500"></i>
-                      <span>主链例外规则：</span>
-                    </h4>
+                {/* Main Chain Exceptions */}
+                <div className="mb-6">
+                  <h4 className="text-[#161615] dark:text-slate-100 font-medium mb-3 font-chinese flex items-center space-x-2">
+                    <i className="fas fa-fire text-primary-500"></i>
+                    <span>主链例外规则：</span>
+                  </h4>
+                  
+                  {editingRules ? (
                     <div className="space-y-3">
-                      {chain.exceptions.map((exception, index) => (
+                      {editingExceptions.map((exception, index) => (
                         <div key={index} className="bg-yellow-500/10 dark:bg-yellow-500/20 rounded-2xl p-4 border border-yellow-500/20 dark:border-yellow-500/30">
-                          <p className="text-yellow-700 dark:text-yellow-300 text-sm font-chinese">{exception}</p>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1 mr-3">
+                              <p className="text-yellow-700 dark:text-yellow-300 text-sm font-chinese mb-2">{exception.description}</p>
+                              <span className={`text-xs px-2 py-1 rounded-full inline-block ${
+                                exception.type === 'normal' ? 'bg-yellow-200 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-200' :
+                                exception.type === 'pause' ? 'bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200' :
+                                exception.type === 'early_complete' ? 'bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200' :
+                                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                              }`}>
+                                {exception.type === 'normal' ? '普通规则' : 
+                                 exception.type === 'pause' ? '暂停计时' : 
+                                 exception.type === 'early_complete' ? '提前结束' : '未知类型'}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteException(index, false)}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                          
+                          {/* 编辑规则类型 */}
+                          <div className="pt-3 border-t border-yellow-500/20">
+                            <span className="text-xs text-yellow-600 dark:text-yellow-400 font-chinese mb-2 block">
+                              规则类型：
+                            </span>
+                            <div className="flex space-x-4">
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    name={`exceptionType_${index}`}
+                                    value="normal"
+                                    checked={exception.type === 'normal'}
+                                    onChange={(e) => {
+                                      const updated = [...editingExceptions];
+                                      updated[index] = { ...updated[index], type: e.target.value as ExceptionRuleType };
+                                      setEditingExceptions(updated);
+                                    }}
+                                    className="sr-only"
+                                  />
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    exception.type === 'normal' 
+                                      ? 'border-yellow-500 bg-yellow-500' 
+                                      : 'border-gray-300 dark:border-gray-500'
+                                  }`}>
+                                    {exception.type === 'normal' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                  </div>
+                                </div>
+                                <span className="text-xs text-yellow-700 dark:text-yellow-300 font-chinese">普通</span>
+                              </label>
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    name={`exceptionType_${index}`}
+                                    value="pause"
+                                    checked={exception.type === 'pause'}
+                                    onChange={(e) => {
+                                      const updated = [...editingExceptions];
+                                      updated[index] = { ...updated[index], type: e.target.value as ExceptionRuleType };
+                                      setEditingExceptions(updated);
+                                    }}
+                                    className="sr-only"
+                                  />
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    exception.type === 'pause' 
+                                      ? 'border-blue-500 bg-blue-500' 
+                                      : 'border-gray-300 dark:border-gray-500'
+                                  }`}>
+                                    {exception.type === 'pause' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                  </div>
+                                </div>
+                                <span className="text-xs text-blue-700 dark:text-blue-300 font-chinese">暂停</span>
+                              </label>
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    name={`exceptionType_${index}`}
+                                    value="early_complete"
+                                    checked={exception.type === 'early_complete'}
+                                    onChange={(e) => {
+                                      const updated = [...editingExceptions];
+                                      updated[index] = { ...updated[index], type: e.target.value as ExceptionRuleType };
+                                      setEditingExceptions(updated);
+                                    }}
+                                    className="sr-only"
+                                  />
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    exception.type === 'early_complete' 
+                                      ? 'border-green-500 bg-green-500' 
+                                      : 'border-gray-300 dark:border-gray-500'
+                                  }`}>
+                                    {exception.type === 'early_complete' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                  </div>
+                                </div>
+                                <span className="text-xs text-green-700 dark:text-green-300 font-chinese">提前结束</span>
+                              </label>
+                            </div>
+                          </div>
                         </div>
                       ))}
+                      
+                      {/* Add new exception */}
+                      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            value={newException}
+                            onChange={(e) => setNewException(e.target.value)}
+                            placeholder="添加新的例外规则..."
+                            className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-sm font-chinese focus:outline-none focus:border-blue-500"
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddException(false)}
+                          />
+                          
+                          <div className="flex items-center space-x-4">
+                            <span className="text-sm text-gray-600 dark:text-gray-400 font-chinese">规则类型：</span>
+                            <div className="flex space-x-4">
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    name="exceptionType"
+                                    value="normal"
+                                    checked={newExceptionType === 'normal'}
+                                    onChange={(e) => setNewExceptionType(e.target.value as ExceptionRuleType)}
+                                    className="sr-only"
+                                  />
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    newExceptionType === 'normal' 
+                                      ? 'border-yellow-500 bg-yellow-500' 
+                                      : 'border-gray-300 dark:border-gray-500'
+                                  }`}>
+                                    {newExceptionType === 'normal' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                  </div>
+                                </div>
+                                <span className="text-sm text-yellow-700 dark:text-yellow-300 font-chinese">普通</span>
+                              </label>
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    name="exceptionType"
+                                    value="pause"
+                                    checked={newExceptionType === 'pause'}
+                                    onChange={(e) => setNewExceptionType(e.target.value as ExceptionRuleType)}
+                                    className="sr-only"
+                                  />
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    newExceptionType === 'pause' 
+                                      ? 'border-blue-500 bg-blue-500' 
+                                      : 'border-gray-300 dark:border-gray-500'
+                                  }`}>
+                                    {newExceptionType === 'pause' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                  </div>
+                                </div>
+                                <span className="text-sm text-blue-700 dark:text-blue-300 font-chinese">暂停</span>
+                              </label>
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="radio"
+                                    name="exceptionType"
+                                    value="early_complete"
+                                    checked={newExceptionType === 'early_complete'}
+                                    onChange={(e) => setNewExceptionType(e.target.value as ExceptionRuleType)}
+                                    className="sr-only"
+                                  />
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    newExceptionType === 'early_complete' 
+                                      ? 'border-green-500 bg-green-500' 
+                                      : 'border-gray-300 dark:border-gray-500'
+                                  }`}>
+                                    {newExceptionType === 'early_complete' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                  </div>
+                                </div>
+                                <span className="text-sm text-green-700 dark:text-green-300 font-chinese">提前结束</span>
+                              </label>
+                            </div>
+                            <button
+                              onClick={() => handleAddException(false)}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-xl transition-colors"
+                            >
+                              <Plus size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
-                
-                {chain.auxiliaryExceptions.length > 0 && (
-                  <div>
-                    <h4 className="text-[#161615] dark:text-slate-100 font-medium mb-3 font-chinese flex items-center space-x-2">
-                      <i className="fas fa-calendar-alt text-blue-500"></i>
-                      <span>预约链例外规则：</span>
-                    </h4>
+                  ) : (
                     <div className="space-y-3">
-                      {chain.auxiliaryExceptions.map((exception, index) => (
+                      {chain.exceptions.length > 0 ? chain.exceptions.map((exception, index) => (
+                        <div key={index} className={`rounded-2xl p-4 border ${
+                          exception.type === 'normal' ? 'bg-yellow-500/10 dark:bg-yellow-500/20 border-yellow-500/20 dark:border-yellow-500/30' :
+                          exception.type === 'pause' ? 'bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/20 dark:border-blue-500/30' :
+                          exception.type === 'early_complete' ? 'bg-green-500/10 dark:bg-green-500/20 border-green-500/20 dark:border-green-500/30' :
+                          'bg-gray-500/10 dark:bg-gray-500/20 border-gray-500/20 dark:border-gray-500/30'
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <p className={`text-sm font-chinese ${
+                              exception.type === 'normal' ? 'text-yellow-700 dark:text-yellow-300' :
+                              exception.type === 'pause' ? 'text-blue-700 dark:text-blue-300' :
+                              exception.type === 'early_complete' ? 'text-green-700 dark:text-green-300' :
+                              'text-gray-700 dark:text-gray-300'
+                            }`}>{exception.description}</p>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              exception.type === 'normal' ? 'bg-yellow-200 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-200' :
+                              exception.type === 'pause' ? 'bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200' :
+                              exception.type === 'early_complete' ? 'bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200' :
+                              'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                            }`}>
+                              {exception.type === 'normal' ? '普通规则' : 
+                               exception.type === 'pause' ? '暂停计时' : 
+                               exception.type === 'early_complete' ? '提前结束' : '未知类型'}
+                            </span>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="text-gray-500 dark:text-gray-400 text-sm font-chinese italic">暂无主链例外规则</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Auxiliary Chain Exceptions */}
+                <div>
+                  <h4 className="text-[#161615] dark:text-slate-100 font-medium mb-3 font-chinese flex items-center space-x-2">
+                    <i className="fas fa-calendar-alt text-blue-500"></i>
+                    <span>预约链例外规则：</span>
+                  </h4>
+                  
+                  {editingRules ? (
+                    <div className="space-y-3">
+                      {editingAuxiliaryExceptions.map((exception, index) => (
+                        <div key={index} className="bg-blue-500/10 dark:bg-blue-500/20 rounded-2xl p-4 border border-blue-500/20 dark:border-blue-500/30 flex items-center justify-between">
+                          <p className="text-blue-700 dark:text-blue-300 text-sm font-chinese flex-1">{exception}</p>
+                          <button
+                            onClick={() => handleDeleteException(index, true)}
+                            className="ml-3 text-red-500 hover:text-red-700 transition-colors"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      
+                      {/* Add new auxiliary exception */}
+                      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
+                        <div className="flex space-x-2">
+                          <input
+                            type="text"
+                            value={newAuxiliaryException}
+                            onChange={(e) => setNewAuxiliaryException(e.target.value)}
+                            placeholder="添加新的预约链例外规则..."
+                            className="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-sm font-chinese focus:outline-none focus:border-blue-500"
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddException(true)}
+                          />
+                          <button
+                            onClick={() => handleAddException(true)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-xl transition-colors"
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {(chain.auxiliaryExceptions && chain.auxiliaryExceptions.length > 0) ? chain.auxiliaryExceptions.map((exception, index) => (
                         <div key={index} className="bg-blue-500/10 dark:bg-blue-500/20 rounded-2xl p-4 border border-blue-500/20 dark:border-blue-500/30">
                           <p className="text-blue-700 dark:text-blue-300 text-sm font-chinese">{exception}</p>
                         </div>
-                      ))}
+                      )) : (
+                        <div className="text-gray-500 dark:text-gray-400 text-sm font-chinese italic">暂无预约链例外规则</div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -359,3 +704,5 @@ export const ChainDetail: React.FC<ChainDetailProps> = ({
     </div>
   );
 };
+
+export default ChainDetail;

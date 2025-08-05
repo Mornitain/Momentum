@@ -1,3 +1,12 @@
+export type ExceptionRuleType = 'normal' | 'pause' | 'early_complete';
+
+export interface ExceptionRule {
+  id: string;
+  description: string;
+  type: ExceptionRuleType;
+  createdAt: Date;
+}
+
 export interface Chain {
   id: string;
   name: string;
@@ -9,8 +18,8 @@ export interface Chain {
   totalCompletions: number;
   totalFailures: number;
   auxiliaryFailures: number; // 辅助链失败次数
-  exceptions: string[];
-  auxiliaryExceptions: string[]; // 辅助链例外规则
+  exceptions: ExceptionRule[]; // 改为带类型的例外规则数组
+  auxiliaryExceptions: string[]; // 辅助链例外规则，确保是数组类型
   // 辅助链设置
   auxiliarySignal: string; // 预约信号，如"打响指"、"设置闹钟"
   auxiliaryDuration: number; // 预约时长（分钟）

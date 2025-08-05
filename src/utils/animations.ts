@@ -1,7 +1,10 @@
 // Animation utilities using anime.js
 declare global {
   interface Window {
-    anime: any;
+    anime: {
+      (config: Record<string, unknown>): void;
+      stagger: (value: number) => unknown;
+    };
   }
 }
 

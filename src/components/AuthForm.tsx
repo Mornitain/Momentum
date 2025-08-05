@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { signIn, signUp } from '../lib/supabase';
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle } from 'lucide-react';
 
-export const AuthForm: React.FC = () => {
+const AuthForm: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,7 +23,8 @@ export const AuthForm: React.FC = () => {
       if (error) {
         setError(error.message);
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      console.error('Authentication error:', err);
       setError('发生未知错误，请重试');
     } finally {
       setLoading(false);
@@ -167,3 +168,5 @@ export const AuthForm: React.FC = () => {
     </div>
   );
 };
+
+export default AuthForm;

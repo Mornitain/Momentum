@@ -1,8 +1,7 @@
 import React from 'react';
 import { Chain, ScheduledSession } from '../types';
-import { ChainCard } from './ChainCard';
-import { ThemeToggle } from './ThemeToggle';
-import { Plus } from 'lucide-react';
+import ChainCard from './ChainCard';
+import ThemeToggle from './ThemeToggle';
 
 interface DashboardProps {
   chains: Chain[];
@@ -17,7 +16,7 @@ interface DashboardProps {
   onExportChain: (chainId: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({
+const Dashboard: React.FC<DashboardProps> = ({
   chains,
   scheduledSessions,
   onCreateChain,
@@ -163,3 +162,5 @@ export const Dashboard: React.FC<DashboardProps> = ({
     </div>
   );
 };
+
+export default Dashboard;
