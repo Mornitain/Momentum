@@ -415,8 +415,12 @@ function App() {
         c.id === chain.id
           ? {
               ...c,
-              currentStreak: 0, // Reset streak
-              totalFailures: c.totalFailures + 1,
+              currentStreak: 0, // 重置主链连续次数
+              auxiliaryStreak: 0, // 重置预约链连续次数
+              totalCompletions: 0, // 重置完成次数
+              totalFailures: 0, // 重置失败次数
+              auxiliaryFailures: 0, // 重置预约链失败次数
+              lastCompletedAt: undefined, // 清除最后完成时间
             }
           : c
       );
