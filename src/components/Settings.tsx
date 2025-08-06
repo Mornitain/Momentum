@@ -39,11 +39,6 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
   const [editingTrigger, setEditingTrigger] = useState<{ id: string; text: string } | null>(null);
   const [editingSignal, setEditingSignal] = useState<{ id: string; text: string } | null>(null);
 
-  // 调试用
-  useEffect(() => {
-    console.log('Settings component mounted');
-  }, []);
-
   // 从localStorage加载自定义模板，合并默认模板
   useEffect(() => {
     const loadTemplates = () => {
@@ -55,33 +50,39 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
       const savedCustomTriggers = localStorage.getItem('customTriggers');
       const savedCustomSignals = localStorage.getItem('customSignals');
       
-      // 合并默认模板和自定义模板
-      let triggers = [...DEFAULT_TRIGGER_TEMPLATES];
-      let signals = [...DEFAULT_SIGNAL_TEMPLATES];
+      console.log('Loading templates from localStorage:', {
+        savedDefaultTriggers: savedDefaultTriggers ? JSON.parse(savedDefaultTriggers).length : 'none',
+        savedDefaultSignals: savedDefaultSignals ? JSON.parse(savedDefaultSignals).length : 'none',
+        customTriggers: savedCustomTriggers ? JSON.parse(savedCustomTriggers).length : 'none',
+        customSignals: savedCustomSignals ? JSON.parse(savedCustomSignals).length : 'none'
+      });
       
-      // 如果有已保存的默认模板修改，使用它们，但需要恢复图标引用
+      let triggers: CustomTemplate[] = [];
+      let signals: CustomTemplate[] = [];
+      
+      // 如果有保存的默认模板，使用它们（这些已经包含了删除的逻辑）
       if (savedDefaultTriggers) {
         const defaultTriggers = JSON.parse(savedDefaultTriggers);
-        triggers = triggers.map(t => {
-          const saved = defaultTriggers.find((st: CustomTemplate) => st.id === t.id);
-          if (saved) {
-            // 恢复图标引用
-            return { ...saved, icon: t.icon, color: t.color };
-          }
-          return t;
+        triggers = defaultTriggers.map((saved: CustomTemplate) => {
+          // 从原始模板中找到图标信息
+          const original = DEFAULT_TRIGGER_TEMPLATES.find(t => t.id === saved.id);
+          return original ? { ...saved, icon: original.icon, color: original.color } : saved;
         });
+      } else {
+        // 第一次使用，加载所有默认模板
+        triggers = [...DEFAULT_TRIGGER_TEMPLATES];
       }
       
       if (savedDefaultSignals) {
         const defaultSignals = JSON.parse(savedDefaultSignals);
-        signals = signals.map(s => {
-          const saved = defaultSignals.find((ss: CustomTemplate) => ss.id === s.id);
-          if (saved) {
-            // 恢复图标引用
-            return { ...saved, icon: s.icon, color: s.color };
-          }
-          return s;
+        signals = defaultSignals.map((saved: CustomTemplate) => {
+          // 从原始模板中找到图标信息
+          const original = DEFAULT_SIGNAL_TEMPLATES.find(s => s.id === saved.id);
+          return original ? { ...saved, icon: original.icon, color: original.color } : saved;
         });
+      } else {
+        // 第一次使用，加载所有默认模板
+        signals = [...DEFAULT_SIGNAL_TEMPLATES];
       }
       
       // 添加自定义模板
@@ -95,6 +96,11 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
         signals = [...signals, ...customSignals];
       }
       
+      console.log('Final loaded templates:', {
+        triggers: triggers.length,
+        signals: signals.length
+      });
+      
       setAllTriggers(triggers);
       setAllSignals(signals);
     };
@@ -104,22 +110,40 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
 
   // 保存到localStorage
   const saveToStorage = (triggers: CustomTemplate[], signals: CustomTemplate[]) => {
-    // 分离默认和自定义模板
-    const defaultTriggers = triggers.filter(t => t.isDefault);
-    const customTriggers = triggers.filter(t => !t.isDefault);
-    const defaultSignals = signals.filter(s => s.isDefault);
-    const customSignals = signals.filter(s => !s.isDefault);
-    
-    // 保存修改过的默认模板（移除图标引用，因为函数不能序列化）
-    const defaultTriggersToSave = defaultTriggers.map(({ icon, color, ...rest }) => rest);
-    const defaultSignalsToSave = defaultSignals.map(({ icon, color, ...rest }) => rest);
-    
-    localStorage.setItem('defaultTriggers', JSON.stringify(defaultTriggersToSave));
-    localStorage.setItem('defaultSignals', JSON.stringify(defaultSignalsToSave));
-    
-    // 保存自定义模板
-    localStorage.setItem('customTriggers', JSON.stringify(customTriggers));
-    localStorage.setItem('customSignals', JSON.stringify(customSignals));
+    try {
+      // 分离默认和自定义模板
+      const defaultTriggers = triggers.filter(t => t.isDefault);
+      const customTriggers = triggers.filter(t => !t.isDefault);
+      const defaultSignals = signals.filter(s => s.isDefault);
+      const customSignals = signals.filter(s => !s.isDefault);
+      
+      console.log('Saving to localStorage:', {
+        defaultTriggers: defaultTriggers.length,
+        customTriggers: customTriggers.length,
+        defaultSignals: defaultSignals.length,
+        customSignals: customSignals.length
+      });
+      
+      // 保存修改过的默认模板（移除图标引用，因为函数不能序列化）
+      const defaultTriggersToSave = defaultTriggers.map(({ icon, color, ...rest }) => rest);
+      const defaultSignalsToSave = defaultSignals.map(({ icon, color, ...rest }) => rest);
+      
+      localStorage.setItem('defaultTriggers', JSON.stringify(defaultTriggersToSave));
+      localStorage.setItem('defaultSignals', JSON.stringify(defaultSignalsToSave));
+      
+      // 保存自定义模板
+      localStorage.setItem('customTriggers', JSON.stringify(customTriggers));
+      localStorage.setItem('customSignals', JSON.stringify(customSignals));
+      
+      // 触发自定义事件通知其他组件
+      window.dispatchEvent(new CustomEvent('settingsUpdated', { 
+        detail: { triggers, signals } 
+      }));
+      
+      console.log('Settings saved successfully');
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    }
   };
 
   const addCustomTrigger = () => {
@@ -217,6 +241,40 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
       setAllTriggers([...DEFAULT_TRIGGER_TEMPLATES]);
       setAllSignals([...DEFAULT_SIGNAL_TEMPLATES]);
     }
+  };
+
+  const handleCompleteSettings = () => {
+    let finalTriggers = [...allTriggers];
+    let finalSignals = [...allSignals];
+    
+    // 如果有正在编辑的触发器，先保存它
+    if (editingTrigger && editingTrigger.text.trim()) {
+      finalTriggers = finalTriggers.map(t => 
+        t.id === editingTrigger.id 
+          ? { ...t, text: editingTrigger.text.trim() }
+          : t
+      );
+    }
+    
+    // 如果有正在编辑的信号，先保存它
+    if (editingSignal && editingSignal.text.trim()) {
+      finalSignals = finalSignals.map(s => 
+        s.id === editingSignal.id 
+          ? { ...s, text: editingSignal.text.trim() }
+          : s
+      );
+    }
+    
+    // 确保最终状态已保存
+    saveToStorage(finalTriggers, finalSignals);
+    
+    // 更新组件状态
+    setAllTriggers(finalTriggers);
+    setAllSignals(finalSignals);
+    setEditingTrigger(null);
+    setEditingSignal(null);
+    
+    onClose();
   };
 
   return (
@@ -463,7 +521,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
               重置为默认
             </button>
             <button
-              onClick={onClose}
+              onClick={handleCompleteSettings}
               className="flex-1 bg-primary-500 hover:bg-primary-600 text-white px-6 py-3 rounded-xl font-medium transition-colors font-chinese"
             >
               完成设置

@@ -85,10 +85,21 @@ const ChainEditor: React.FC<ChainEditorProps> = ({
     updateTemplates();
     
     // 监听设置变化
-    const handleStorageChange = () => updateTemplates();
-    window.addEventListener('storage', handleStorageChange);
+    const handleStorageChange = () => {
+      updateTemplates();
+    };
     
-    return () => window.removeEventListener('storage', handleStorageChange);
+    const handleSettingsUpdate = () => {
+      updateTemplates();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('settingsUpdated', handleSettingsUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('settingsUpdated', handleSettingsUpdate);
+    };
   }, []); // 组件加载时获取模板
 
   // 当触发器变化时，更新预约完成条件的默认值

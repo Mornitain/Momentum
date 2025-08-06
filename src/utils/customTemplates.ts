@@ -27,16 +27,21 @@ const DEFAULT_SIGNAL_TEMPLATES: CustomTemplate[] = [
 ];
 
 export const getAllTriggers = (): CustomTemplate[] => {
-  // 获取默认模板的修改
+  // 获取保存的默认模板
   const savedDefaultTriggers = localStorage.getItem('defaultTriggers');
-  let triggers = [...DEFAULT_TRIGGER_TEMPLATES];
+  let triggers: CustomTemplate[] = [];
   
   if (savedDefaultTriggers) {
+    // 使用保存的默认模板（已经包含了删除的逻辑）
     const defaultTriggers = JSON.parse(savedDefaultTriggers);
-    triggers = triggers.map(t => {
-      const saved = defaultTriggers.find((st: CustomTemplate) => st.id === t.id);
-      return saved || t;
+    triggers = defaultTriggers.map((saved: CustomTemplate) => {
+      // 从原始模板中找到图标信息
+      const original = DEFAULT_TRIGGER_TEMPLATES.find(t => t.id === saved.id);
+      return original ? { ...saved, icon: original.icon, color: original.color } : saved;
     });
+  } else {
+    // 第一次使用，加载所有默认模板
+    triggers = [...DEFAULT_TRIGGER_TEMPLATES];
   }
   
   // 添加自定义触发器
@@ -49,16 +54,21 @@ export const getAllTriggers = (): CustomTemplate[] => {
 };
 
 export const getAllSignals = (): CustomTemplate[] => {
-  // 获取默认模板的修改
+  // 获取保存的默认模板
   const savedDefaultSignals = localStorage.getItem('defaultSignals');
-  let signals = [...DEFAULT_SIGNAL_TEMPLATES];
+  let signals: CustomTemplate[] = [];
   
   if (savedDefaultSignals) {
+    // 使用保存的默认模板（已经包含了删除的逻辑）
     const defaultSignals = JSON.parse(savedDefaultSignals);
-    signals = signals.map(s => {
-      const saved = defaultSignals.find((ss: CustomTemplate) => ss.id === s.id);
-      return saved || s;
+    signals = defaultSignals.map((saved: CustomTemplate) => {
+      // 从原始模板中找到图标信息
+      const original = DEFAULT_SIGNAL_TEMPLATES.find(s => s.id === saved.id);
+      return original ? { ...saved, icon: original.icon, color: original.color } : saved;
     });
+  } else {
+    // 第一次使用，加载所有默认模板
+    signals = [...DEFAULT_SIGNAL_TEMPLATES];
   }
   
   // 添加自定义信号
