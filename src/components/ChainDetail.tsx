@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Chain, CompletionHistory, ExceptionRule, ExceptionRuleType } from '../types';
 import { ArrowLeft, Flame, CheckCircle, XCircle, Calendar, Clock, AlertCircle, Trash2, Edit, Plus, X } from 'lucide-react';
 import { formatTime, formatFocusTimeCompact } from '../utils/time';
@@ -412,9 +413,10 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                                   value={exception.extendMinutes || 5}
                                   onChange={(e) => {
                                     const updated = [...editingExceptions];
+                                    const value = e.target.value === '' ? '' : parseInt(e.target.value);
                                     updated[index] = { 
                                       ...updated[index], 
-                                      extendMinutes: Math.max(1, parseInt(e.target.value) || 1) 
+                                      extendMinutes: value === '' ? undefined : Math.max(1, value || 1)
                                     };
                                     setEditingExceptions(updated);
                                   }}
@@ -560,8 +562,11 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                                 type="number"
                                 min="1"
                                 max="120"
-                                value={newExtendMinutes}
-                                onChange={(e) => setNewExtendMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                                value={newExtendMinutes === 0 ? '' : newExtendMinutes}
+                                onChange={(e) => {
+                                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                  setNewExtendMinutes(value === 0 ? 0 : Math.max(1, value || 1));
+                                }}
                                 className="w-full bg-white dark:bg-gray-800/50 border border-purple-300 dark:border-purple-500/30 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 transition-all duration-300 font-chinese"
                                 placeholder="输入延长的分钟数"
                               />
@@ -759,8 +764,8 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
         </div>
         
         {/* Delete confirmation modal */}
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        {showDeleteConfirm && createPortal(
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
             <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-3xl p-8 max-w-lg w-full border border-gray-200/60 dark:border-slate-600/60 shadow-2xl animate-scale-in">
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-full bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center mx-auto mb-6">
@@ -855,7 +860,8 @@ const ChainDetail: React.FC<ChainDetailProps> = ({
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>

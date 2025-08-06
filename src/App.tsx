@@ -159,7 +159,7 @@ function App() {
               onCancelScheduledSession={handleCancelScheduledSession}
               onDeleteChain={handleDeleteChain}
               onExportChain={handleExportChain}
-              onImportChain={handleImportChain}
+              onImportChains={handleImportChains}
             />
             {showAuxiliaryJudgment && (
               <AuxiliaryJudgment
@@ -507,7 +507,7 @@ function App() {
     setState(prev => {
       const updatedSession = {
         ...prev.activeSession!,
-        duration: prev.activeSession!.duration + extendMinutes * 60 * 1000, // 将分钟转换为毫秒
+        duration: prev.activeSession!.duration + extendMinutes, // duration 以分钟为单位
       };
       
       // 异步保存但不阻塞UI更新
@@ -600,7 +600,7 @@ function App() {
     setShowAuxiliaryJudgment(chainId);
   };
 
-  const handleAddException = (exceptionRule: { description: string; type: ExceptionRuleType }) => {
+  const handleAddException = (exceptionRule: { description: string; type: ExceptionRuleType; extendMinutes?: number }) => {
     if (!state.activeSession) return;
 
     setState(prev => {
@@ -612,7 +612,8 @@ function App() {
                 id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 description: exceptionRule.description,
                 type: exceptionRule.type,
-                createdAt: new Date()
+                createdAt: new Date(),
+                ...(exceptionRule.extendMinutes && { extendMinutes: exceptionRule.extendMinutes })
               }]
             }
           : chain
@@ -720,49 +721,16 @@ function App() {
     linkElement.click();
   };
 
-  const handleImportChain = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result;
-        if (typeof text !== 'string') {
-          alert('Error: Could not read file content.');
-          return;
-        }
-        const importedChain = JSON.parse(text) as Chain;
+  const handleImportChains = (chains: Chain[], replace: boolean = false) => {
+    setState(prev => {
+      const updatedChains = replace ? chains : [...prev.chains, ...chains];
+      storage.saveChains(updatedChains);
 
-        // Basic validation
-        if (!importedChain.name || !importedChain.trigger || !importedChain.duration) {
-          alert('Error: Invalid chain file.');
-          return;
-        }
-
-        // Create as a new chain with a new ID, but preserve all other data
-        const newChain: Chain = {
-          ...importedChain,
-          id: crypto.randomUUID(), // Assign a new unique ID
-          createdAt: new Date(), // Set new creation date
-          lastCompletedAt: importedChain.lastCompletedAt ? new Date(importedChain.lastCompletedAt) : undefined,
-        };
-
-        setState(prev => {
-          const updatedChains = [...prev.chains, newChain];
-          storage.saveChains(updatedChains);
-
-          return {
-            ...prev,
-            chains: updatedChains,
-          };
-        });
-
-        alert(`成功导入新链条: "${newChain.name}"`);
-
-      } catch (error) {
-        console.error('Failed to import chain:', error);
-        alert('Error: Failed to parse chain file. Make sure it is a valid exported JSON file.');
-      }
-    };
-    reader.readAsText(file);
+      return {
+        ...prev,
+        chains: updatedChains,
+      };
+    });
   };
 
   return renderContent();

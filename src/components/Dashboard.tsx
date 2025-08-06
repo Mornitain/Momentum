@@ -3,13 +3,14 @@ import { Chain, ScheduledSession } from '../types';
 import ChainCard from './ChainCard';
 import ThemeToggle from './ThemeToggle';
 import Settings from './Settings';
-import { Settings as SettingsIcon } from 'lucide-react';
+import ImportExport from './ImportExport';
+import { Settings as SettingsIcon, Archive } from 'lucide-react';
 
 interface DashboardProps {
   chains: Chain[];
   scheduledSessions: ScheduledSession[];
   onCreateChain: () => void;
-  onImportChain: (file: File) => void;
+  onImportChains: (chains: Chain[]) => void;
   onStartChain: (chainId: string) => void;
   onScheduleChain: (chainId: string) => void;
   onViewChainDetail: (chainId: string) => void;
@@ -22,7 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   chains,
   scheduledSessions,
   onCreateChain,
-  onImportChain,
+  onImportChains,
   onStartChain,
   onScheduleChain,
   onViewChainDetail,
@@ -31,33 +32,14 @@ const Dashboard: React.FC<DashboardProps> = ({
   onExportChain,
 }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [showImportExport, setShowImportExport] = useState(false);
 
   const getScheduledSession = (chainId: string) => {
     return scheduledSessions.find(session => session.chainId === chainId);
   };
 
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      onImportChain(file);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 md:p-6">
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        className="hidden"
-        accept=".json"
-      />
       <div className="max-w-7xl mx-auto">
         {/* Theme toggle in header */}
         <div className="flex justify-end mb-6">
@@ -107,11 +89,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <span className="font-chinese font-semibold">自定义设置</span>
                 </button>
                 <button
-                  onClick={handleImportClick}
+                  onClick={() => setShowImportExport(true)}
                   className="w-full sm:w-auto bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 px-8 py-4 rounded-2xl font-medium transition-all duration-300 flex items-center justify-center space-x-3 hover:scale-105"
                 >
-                  <i className="fas fa-upload text-lg"></i>
-                  <span className="font-chinese font-semibold">导入链条</span>
+                  <Archive size={20} />
+                  <span className="font-chinese font-semibold">导入数据</span>
                 </button>
                 <button
                   onClick={onCreateChain}
@@ -143,11 +125,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <span className="font-chinese font-medium">设置</span>
                 </button>
                 <button
-                  onClick={handleImportClick}
+                  onClick={() => setShowImportExport(true)}
                   className="bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-2xl font-medium transition-all duration-300 flex items-center space-x-2 hover:scale-105"
                 >
-                  <i className="fas fa-upload"></i>
-                  <span className="font-chinese font-medium">导入链</span>
+                  <Archive size={16} />
+                  <span className="font-chinese font-medium">导入/导出</span>
                 </button>
                 <button
                   onClick={onCreateChain}
@@ -181,6 +163,15 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Settings Modal */}
       {showSettings && (
         <Settings onClose={() => setShowSettings(false)} />
+      )}
+      
+      {/* Import/Export Modal */}
+      {showImportExport && (
+        <ImportExport
+          chains={chains}
+          onImportChains={onImportChains}
+          onClose={() => setShowImportExport(false)}
+        />
       )}
     </div>
   );
