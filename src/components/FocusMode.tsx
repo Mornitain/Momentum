@@ -37,28 +37,53 @@ const FocusMode: React.FC<FocusModeProps> = ({
   const [ruleType, setRuleType] = useState<ExceptionRuleType>('normal');
   const [extendMinutes, setExtendMinutes] = useState<number>(5);
 
+  // 计算初始时间函数
+  const calculateInitialTime = () => {
+    const now = Date.now();
+    const realElapsedTime = session.isPaused 
+      ? (session.pausedAt?.getTime() || now) - session.startedAt.getTime()
+      : now - session.startedAt.getTime();
+    
+    const adjustedElapsedTime = realElapsedTime - session.totalPausedTime;
+    
+    // 倒计时模式：返回剩余时间（秒）
+    const sessionDurationMs = session.duration * 60 * 1000;
+    const remaining = Math.max(0, sessionDurationMs - adjustedElapsedTime);
+    const remainingSeconds = Math.ceil(remaining / 1000);
+    
+    return remainingSeconds;
+  };
+
+  // 初始化计时器状态
+  React.useEffect(() => {
+    const initialTime = calculateInitialTime();
+    setTimeRemaining(initialTime);
+  }, [session.startedAt, session.totalPausedTime, session.duration]);
+
   useEffect(() => {
-    const calculateTimeRemaining = () => {
+    const calculateTime = () => {
       const now = Date.now();
-      const sessionDurationMs = session.duration * 60 * 1000;
-      const elapsedTime = session.isPaused 
+      const realElapsedTime = session.isPaused 
         ? (session.pausedAt?.getTime() || now) - session.startedAt.getTime()
         : now - session.startedAt.getTime();
       
-      const adjustedElapsedTime = elapsedTime - session.totalPausedTime;
-      const remaining = Math.max(0, sessionDurationMs - adjustedElapsedTime);
+      const adjustedElapsedTime = realElapsedTime - session.totalPausedTime;
       
+      // 倒计时模式：返回剩余时间（秒）
+      const sessionDurationMs = session.duration * 60 * 1000;
+      const remaining = Math.max(0, sessionDurationMs - adjustedElapsedTime);
       return Math.ceil(remaining / 1000);
     };
 
     const updateTimer = () => {
       if (session.isPaused) return;
       
-      const remaining = calculateTimeRemaining();
-      setTimeRemaining(remaining);
+      const time = calculateTime();
       
-      if (remaining <= 0) {
-        showNotification('任务完成', `“${chain.name}”已完成！`);
+      setTimeRemaining(time);
+      
+      if (time <= 0) {
+        showNotification('任务完成', `"${chain.name}"已完成！`);
         onComplete();
       }
     };
@@ -68,6 +93,7 @@ const FocusMode: React.FC<FocusModeProps> = ({
     return () => clearInterval(interval);
   }, [session, onComplete, chain.name]);
 
+  // 计算进度条
   const progress = ((session.duration * 60 - timeRemaining) / (session.duration * 60)) * 100;
 
   const handleInterruptClick = () => {
@@ -223,7 +249,11 @@ const FocusMode: React.FC<FocusModeProps> = ({
     setUseExistingRule(useExisting);
     if (useExisting) {
       setInterruptReason('');
-      setSelectedExistingRule(chain.exceptions[0]?.id || '');
+      // 优先选择第一个可用的规则
+      const availableRules = chain.exceptions.filter(exception => 
+        getAvailableRuleTypes().includes(exception.type)
+      );
+      setSelectedExistingRule(availableRules[0]?.id || '');
     } else {
       setSelectedExistingRule('');
     }
@@ -234,6 +264,11 @@ const FocusMode: React.FC<FocusModeProps> = ({
     setInterruptReason('');
     setSelectedExistingRule('');
     setUseExistingRule(false);
+  };
+
+  // 获取可用的规则类型
+  const getAvailableRuleTypes = (): ExceptionRuleType[] => {
+    return ['normal', 'pause', 'early_complete', 'extend_time', 'cancel_focus'];
   };
 
   return (
@@ -342,14 +377,16 @@ const FocusMode: React.FC<FocusModeProps> = ({
 
       {/* Control buttons */}
       <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2">
-        {/* Interrupt button */}
-        <button
-          onClick={handleInterruptClick}
-          className="bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-3xl font-medium transition-all duration-300 flex items-center space-x-3 border border-red-400 hover:border-red-500 hover:scale-105 shadow-2xl font-chinese"
-        >
-          <AlertTriangle size={20} />
-          <span>中断/规则判定</span>
-        </button>
+        <div className="flex items-center space-x-4">
+          {/* Interrupt button */}
+          <button
+            onClick={handleInterruptClick}
+            className="bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-3xl font-medium transition-all duration-300 flex items-center space-x-3 border border-red-400 hover:border-red-500 hover:scale-105 shadow-2xl font-chinese"
+          >
+            <AlertTriangle size={20} />
+            <span>中断/规则判定</span>
+          </button>
+        </div>
       </div>
 
       {/* Interrupt warning modal */}
@@ -416,12 +453,14 @@ const FocusMode: React.FC<FocusModeProps> = ({
                     onChange={(e) => setSelectedExistingRule(e.target.value)}
                     className="w-full bg-white dark:bg-gray-800/50 border border-green-300 dark:border-green-500/30 rounded-2xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all duration-300 font-chinese"
                   >
-                    {chain.exceptions.map((exception, index) => (
-                      <option key={index} value={exception.id} className="bg-white dark:bg-gray-800">
-                        {exception.description} ({getRuleTypeText(exception.type)}
-                        {exception.type === 'extend_time' && exception.extendMinutes ? ` - ${exception.extendMinutes}分钟` : ''})
-                      </option>
-                    ))}
+                    {chain.exceptions
+                      .filter(exception => getAvailableRuleTypes().includes(exception.type))
+                      .map((exception, index) => (
+                        <option key={index} value={exception.id} className="bg-white dark:bg-gray-800">
+                          {exception.description} ({getRuleTypeText(exception.type)}
+                          {exception.type === 'extend_time' && exception.extendMinutes ? ` - ${exception.extendMinutes}分钟` : ''})
+                        </option>
+                      ))}
                   </select>
                   <div className="mt-4 p-4 bg-green-100 dark:bg-green-500/10 rounded-2xl border border-green-200 dark:border-green-500/30">
                     <div className="flex items-center space-x-3 text-green-700 dark:text-green-300">
@@ -455,213 +494,127 @@ const FocusMode: React.FC<FocusModeProps> = ({
                     required
                   />
                   
-                  {/* 规则类型选择 */}
+                  {/* 规则类型选择 - 根据计时类型过滤 */}
                   <div className="mt-4">
                     <label className="block text-yellow-700 dark:text-yellow-300 text-sm font-medium mb-3 font-chinese">
                       规则类型：
                     </label>
                     <div className="space-y-2">
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <div className="relative">
-                          <input
-                            type="radio"
-                            name="newRuleType"
-                            value="normal"
-                            checked={ruleType === 'normal'}
-                            onChange={(e) => setRuleType(e.target.value as ExceptionRuleType)}
-                            className="sr-only"
-                          />
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                            ruleType === 'normal' 
-                              ? 'border-yellow-500 bg-yellow-500' 
-                              : 'border-gray-300 dark:border-gray-500'
-                          }`}>
-                            {ruleType === 'normal' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                      {getAvailableRuleTypes().map((type) => (
+                        <label key={type} className="flex items-center space-x-3 cursor-pointer">
+                          <div className="relative">
+                            <input
+                              type="radio"
+                              name="newRuleType"
+                              value={type}
+                              checked={ruleType === type}
+                              onChange={(e) => setRuleType(e.target.value as ExceptionRuleType)}
+                              className="sr-only"
+                            />
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                              ruleType === type 
+                                ? 'border-yellow-500 bg-yellow-500' 
+                                : 'border-gray-300 dark:border-gray-500'
+                            }`}>
+                              {ruleType === type && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-yellow-700 dark:text-yellow-300 text-sm font-chinese">普通规则 - 允许行为并继续任务</span>
-                      </label>
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <div className="relative">
-                          <input
-                            type="radio"
-                            name="newRuleType"
-                            value="pause"
-                            checked={ruleType === 'pause'}
-                            onChange={(e) => setRuleType(e.target.value as ExceptionRuleType)}
-                            className="sr-only"
-                          />
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                            ruleType === 'pause' 
-                              ? 'border-blue-500 bg-blue-500' 
-                              : 'border-gray-300 dark:border-gray-500'
-                          }`}>
-                            {ruleType === 'pause' && <div className="w-2 h-2 rounded-full bg-white"></div>}
-                          </div>
-                        </div>
-                        <span className="text-blue-700 dark:text-blue-300 text-sm font-chinese">暂停计时 - 暂停任务计时（如上厕所）</span>
-                      </label>
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <div className="relative">
-                          <input
-                            type="radio"
-                            name="newRuleType"
-                            value="early_complete"
-                            checked={ruleType === 'early_complete'}
-                            onChange={(e) => setRuleType(e.target.value as ExceptionRuleType)}
-                            className="sr-only"
-                          />
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                            ruleType === 'early_complete' 
-                              ? 'border-green-500 bg-green-500' 
-                              : 'border-gray-300 dark:border-gray-500'
-                          }`}>
-                            {ruleType === 'early_complete' && <div className="w-2 h-2 rounded-full bg-white"></div>}
-                          </div>
-                        </div>
-                        <span className="text-green-700 dark:text-green-300 text-sm font-chinese">提前结束 - 高效完成任务提前结束</span>
-                      </label>
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <div className="relative">
-                          <input
-                            type="radio"
-                            name="newRuleType"
-                            value="extend_time"
-                            checked={ruleType === 'extend_time'}
-                            onChange={(e) => setRuleType(e.target.value as ExceptionRuleType)}
-                            className="sr-only"
-                          />
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                            ruleType === 'extend_time' 
-                              ? 'border-purple-500 bg-purple-500' 
-                              : 'border-gray-300 dark:border-gray-500'
-                          }`}>
-                            {ruleType === 'extend_time' && <div className="w-2 h-2 rounded-full bg-white"></div>}
-                          </div>
-                        </div>
-                        <span className="text-purple-700 dark:text-purple-300 text-sm font-chinese">延长计时 - 延长当前计时时间</span>
-                      </label>
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <div className="relative">
-                          <input
-                            type="radio"
-                            name="newRuleType"
-                            value="cancel_focus"
-                            checked={ruleType === 'cancel_focus'}
-                            onChange={(e) => setRuleType(e.target.value as ExceptionRuleType)}
-                            className="sr-only"
-                          />
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                            ruleType === 'cancel_focus' 
-                              ? 'border-red-500 bg-red-500' 
-                              : 'border-gray-300 dark:border-gray-500'
-                          }`}>
-                            {ruleType === 'cancel_focus' && <div className="w-2 h-2 rounded-full bg-white"></div>}
-                          </div>
-                        </div>
-                        <span className="text-red-700 dark:text-red-300 text-sm font-chinese">取消专注 - 立即停止计时且不计入记录</span>
-                      </label>
-                    </div>
-                    
-                    {/* 延长时间输入框 */}
-                    {ruleType === 'extend_time' && (
-                      <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-500/10 rounded-2xl border border-purple-200 dark:border-purple-500/30">
-                        <label className="block text-purple-700 dark:text-purple-300 text-sm font-medium mb-2 font-chinese">
-                          延长时间（分钟）：
+                          <span className="text-yellow-700 dark:text-yellow-300 text-sm font-chinese">
+                            {type === 'normal' && '普通规则 - 允许行为并继续任务'}
+                            {type === 'pause' && '暂停计时 - 暂停计时但保持任务'}
+                            {type === 'early_complete' && '提前结束 - 高效完成任务提前结束'}
+                            {type === 'extend_time' && '延长计时 - 延长当前任务时间'}
+                            {type === 'cancel_focus' && '取消专注 - 立即停止计时且不计入记录'}
+                          </span>
                         </label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="120"
-                          value={extendMinutes}
-                          onChange={(e) => setExtendMinutes(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-full bg-white dark:bg-gray-800/50 border border-purple-300 dark:border-purple-500/30 rounded-2xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 font-chinese"
-                          placeholder="输入延长的分钟数"
-                        />
-                        <p className="mt-2 text-purple-600 dark:text-purple-400 text-xs font-chinese">
-                          建议延长 5-30 分钟，最多 120 分钟
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {interruptReason.trim() && chain.exceptions.some(rule => rule.description === interruptReason.trim()) && (
-                    <div className="mt-4 p-4 bg-yellow-100 dark:bg-yellow-500/10 rounded-2xl border border-yellow-200 dark:border-yellow-500/30">
-                      <p className="text-yellow-700 dark:text-yellow-300 text-sm font-chinese">
-                        ⚠️ 此规则已存在，建议选择"使用已有例外规则"
-                      </p>
+                      ))}
+                      
+                      {/* 延长时间选项 */}
+                      {ruleType === 'extend_time' && (
+                        <div className="ml-7 mt-2">
+                          <label className="block text-yellow-700 dark:text-yellow-300 text-xs font-medium mb-2 font-chinese">
+                            延长时间（分钟）：
+                          </label>
+                          <select
+                            value={extendMinutes}
+                            onChange={(e) => setExtendMinutes(Number(e.target.value))}
+                            className="bg-white dark:bg-gray-800/50 border border-yellow-300 dark:border-yellow-500/30 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-yellow-500 transition-colors"
+                          >
+                            <option value={5}>5分钟</option>
+                            <option value={10}>10分钟</option>
+                            <option value={15}>15分钟</option>
+                            <option value={20}>20分钟</option>
+                            <option value={30}>30分钟</option>
+                          </select>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
+              </div>
             </div>
-
+            
             {/* Footer - 固定在底部 */}
-            <div className="p-8 pt-4 flex-shrink-0">
+            <div className="p-8 pt-6 border-t border-gray-200 dark:border-gray-700/50 flex-shrink-0">
               <div className="space-y-4">
-                <button
-                  onClick={handleJudgmentFailure}
-                  className="w-full bg-red-500/90 hover:bg-red-500 text-white px-6 py-4 rounded-2xl font-medium transition-all duration-300 hover:scale-105 font-chinese"
-                >
-                  <div className="text-left">
-                    <div className="font-bold text-lg">判定失败</div>
-                    <div className="text-sm text-red-200">主链记录将从 #{chain.currentStreak} 清零为 #0</div>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={handleJudgmentAllow}
-                  disabled={useExistingRule ? !selectedExistingRule : !interruptReason.trim()}
-                  className={`w-full px-6 py-4 rounded-2xl font-medium transition-all duration-300 disabled:bg-gray-600 disabled:cursor-not-allowed text-white hover:scale-105 font-chinese ${
-                    useExistingRule 
-                      ? 'bg-green-500/90 hover:bg-green-500' 
-                      : getButtonStyleByRuleType(ruleType)
-                  }`}
-                >
-                  <div className="text-left">
-                    <div className="font-bold text-lg">
-                      {useExistingRule 
-                        ? `使用例外规则 - ${getRuleTypeText(chain.exceptions.find(r => r.id === selectedExistingRule)?.type || 'normal')}` 
-                        : `判定允许（下必为例） - ${getRuleTypeText(ruleType)}`
+                {/* 执行按钮 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={handleJudgmentFailure}
+                    className="bg-red-500/90 hover:bg-red-500 text-red-200 px-6 py-4 rounded-2xl font-medium transition-all duration-300 hover:scale-105 font-chinese border border-red-400"
+                  >
+                    判定失败
+                    <div className="text-xs opacity-80 mt-1">主链记录将从 #{chain.currentStreak} 清零为 #0</div>
+                  </button>
+                  
+                  <button
+                    onClick={handleJudgmentAllow}
+                    className={`${
+                      useExistingRule 
+                        ? (() => {
+                            const selectedRule = chain.exceptions.find(r => r.id === selectedExistingRule);
+                            return getButtonStyleByRuleType(selectedRule?.type || 'normal');
+                          })()
+                        : getButtonStyleByRuleType(ruleType)
+                    } ${
+                      useExistingRule
+                        ? (() => {
+                            const selectedRule = chain.exceptions.find(r => r.id === selectedExistingRule);
+                            return getButtonTextColorByRuleType(selectedRule?.type || 'normal');
+                          })()
+                        : getButtonTextColorByRuleType(ruleType)
+                    } px-6 py-4 rounded-2xl font-medium transition-all duration-300 hover:scale-105 font-chinese border`}
+                    disabled={!useExistingRule && !interruptReason.trim()}
+                  >
+                    判定允许（下必为例) - {
+                      useExistingRule
+                        ? (() => {
+                            const selectedRule = chain.exceptions.find(r => r.id === selectedExistingRule);
+                            return getRuleTypeText(selectedRule?.type || 'normal');
+                          })()
+                        : getRuleTypeText(ruleType)
+                    }
+                    <div className="text-xs opacity-80 mt-1">
+                      {useExistingRule
+                        ? (() => {
+                            const selectedRule = chain.exceptions.find(r => r.id === selectedExistingRule);
+                            return getRuleActionText(selectedRule?.type || 'normal');
+                          })()
+                        : getRuleActionText(ruleType)
                       }
                     </div>
-                    <div className={`text-sm ${useExistingRule ? 'text-green-200' : getButtonTextColorByRuleType(ruleType)}`}>
-                      {useExistingRule 
-                        ? getRuleActionText(chain.exceptions.find(r => r.id === selectedExistingRule)?.type || 'normal')
-                        : `此行为将永久添加到例外规则中 - ${getRuleActionText(ruleType)}`
-                      }
-                    </div>
-                  </div>
-                </button>
+                  </button>
+                </div>
                 
+                {/* 取消按钮 */}
                 <button
                   onClick={resetInterruptModal}
-                  className="w-full bg-gray-200 dark:bg-gray-600/90 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-4 py-3 rounded-2xl font-medium transition-all duration-300 hover:scale-105 font-chinese"
+                  className="w-full bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-600/50 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-2xl font-medium transition-all duration-300 font-chinese border border-gray-300 dark:border-gray-600"
                 >
                   取消 - 继续任务
                 </button>
               </div>
-              
-              {chain.exceptions.length > 0 && (
-                <div className="mt-6 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700/50">
-                  <h4 className="text-gray-900 dark:text-white font-medium mb-4 flex items-center space-x-2 font-chinese">
-                    <i className="fas fa-list text-primary-500"></i>
-                    <span>当前例外规则：</span>
-                  </h4>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {chain.exceptions.map((exception, index) => (
-                      <div key={index} className="text-yellow-600 dark:text-yellow-300 text-sm flex items-center space-x-2">
-                        <i className="fas fa-check-circle text-xs"></i>
-                        <span>{exception.description}</span>
-                        <span className="text-xs px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-                          {getRuleTypeText(exception.type)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
             </div>
           </div>
         </div>
