@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>存储调试工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        pre {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .danger {
+            background: #f44336;
+        }
+        .danger:hover {
+            background: #da190b;
+        }
+        .info {
+            background: #2196F3;
+        }
+        .info:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Momentum 存储调试工具</h1>
+    
+    <div class="section">
+        <h2>操作</h2>
+        <button onclick="loadData()">刷新数据</button>
+        <button onclick="clearSessionRecords()" class="danger">清空会话记录</button>
+        <button onclick="clearCompletionHistory()" class="danger">清空完成历史</button>
+        <button onclick="clearAllData()" class="danger">清空所有数据</button>
+        <button onclick="exportData()" class="info">导出数据</button>
+    </div>
+
+    <div class="section">
+        <h2>完成历史 (momentum_completionHistory)</h2>
+        <pre id="completionHistory">加载中...</pre>
+    </div>
+
+    <div class="section">
+        <h2>会话记录 (momentum_session_records)</h2>
+        <pre id="sessionRecords">加载中...</pre>
+    </div>
+
+    <div class="section">
+        <h2>活动会话 (momentum_activeSession)</h2>
+        <pre id="activeSession">加载中...</pre>
+    </div>
+
+    <div class="section">
+        <h2>链条数据 (momentum_chains)</h2>
+        <pre id="chains">加载中...</pre>
+    </div>
+
+    <script>
+        function loadData() {
+            // 加载完成历史
+            const completionHistory = localStorage.getItem('momentum_completionHistory');
+            document.getElementById('completionHistory').textContent = 
+                completionHistory ? JSON.stringify(JSON.parse(completionHistory), null, 2) : '无数据';
+
+            // 加载会话记录
+            const sessionRecords = localStorage.getItem('momentum_session_records');
+            document.getElementById('sessionRecords').textContent = 
+                sessionRecords ? JSON.stringify(JSON.parse(sessionRecords), null, 2) : '无数据';
+
+            // 加载活动会话
+            const activeSession = localStorage.getItem('momentum_activeSession');
+            document.getElementById('activeSession').textContent = 
+                activeSession ? JSON.stringify(JSON.parse(activeSession), null, 2) : '无数据';
+
+            // 加载链条数据
+            const chains = localStorage.getItem('momentum_chains');
+            document.getElementById('chains').textContent = 
+                chains ? JSON.stringify(JSON.parse(chains), null, 2) : '无数据';
+        }
+
+        function clearSessionRecords() {
+            if (confirm('确定要清空所有会话记录吗？')) {
+                localStorage.removeItem('momentum_session_records');
+                loadData();
+                alert('会话记录已清空');
+            }
+        }
+
+        function clearCompletionHistory() {
+            if (confirm('确定要清空完成历史吗？')) {
+                localStorage.removeItem('momentum_completionHistory');
+                loadData();
+                alert('完成历史已清空');
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('确定要清空所有 Momentum 数据吗？这个操作不可恢复！')) {
+                const keys = Object.keys(localStorage).filter(key => key.startsWith('momentum_'));
+                keys.forEach(key => localStorage.removeItem(key));
+                loadData();
+                alert('所有数据已清空');
+            }
+        }
+
+        function exportData() {
+            const data = {
+                completionHistory: JSON.parse(localStorage.getItem('momentum_completionHistory') || '[]'),
+                sessionRecords: JSON.parse(localStorage.getItem('momentum_session_records') || '[]'),
+                activeSession: JSON.parse(localStorage.getItem('momentum_activeSession') || 'null'),
+                chains: JSON.parse(localStorage.getItem('momentum_chains') || '[]'),
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `momentum-data-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 页面加载时自动加载数据
+        window.onload = loadData;
+    </script>
+</body>
+</html>

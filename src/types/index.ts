@@ -53,6 +53,7 @@ export interface CompletionHistory {
   duration: number; // 原设定时长（分钟）
   actualFocusTime: number; // 实际专注时长（秒），精确到秒
   wasSuccessful: boolean;
+  isEarlyComplete?: boolean; // 是否为提前完成
   reasonForFailure?: string;
   ruleEffects?: ExceptionRuleEffect[]; // 记录生效的例外规则影响
 }
@@ -64,7 +65,7 @@ export interface ExceptionRuleEffect {
   timeImpact?: number; // 时间影响（秒），暂停为负数，延长为正数
 }
 
-export type ViewState = 'dashboard' | 'editor' | 'focus' | 'detail';
+export type ViewState = 'dashboard' | 'editor' | 'focus' | 'detail' | 'reports';
 
 export interface AppState {
   chains: Chain[];

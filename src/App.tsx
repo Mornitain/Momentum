@@ -6,6 +6,7 @@ import ChainEditor from './components/ChainEditor';
 import FocusMode from './components/FocusMode';
 import ChainDetail from './components/ChainDetail';
 import AuxiliaryJudgment from './components/AuxiliaryJudgment';
+import ReportDashboard from './components/reports/ReportDashboard';
 import { storage as localStorageUtils } from './utils/storage';
 import { supabaseStorage } from './utils/supabaseStorage';
 import { getCurrentUser, isSupabaseConfigured } from './lib/supabase';
@@ -105,6 +106,7 @@ function App() {
               onResume={handleResumeSession}
               onExtendTime={handleExtendTime}
               onCancelFocus={handleCancelFocus}
+              onEarlyComplete={handleEarlyComplete}
             />
             {showAuxiliaryJudgment && (
               <AuxiliaryJudgment
@@ -146,6 +148,19 @@ function App() {
         );
       }
 
+      case 'reports':
+        return (
+          <>
+            <ReportDashboard />
+            <button
+              onClick={handleBackToDashboard}
+              className="fixed top-6 left-6 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors z-50 shadow-lg"
+            >
+              ← 返回
+            </button>
+          </>
+        );
+
       default:
         return (
           <>
@@ -160,6 +175,7 @@ function App() {
               onDeleteChain={handleDeleteChain}
               onExportChain={handleExportChain}
               onImportChains={handleImportChains}
+              onViewReports={handleViewReports}
             />
             {showAuxiliaryJudgment && (
               <AuxiliaryJudgment
@@ -369,6 +385,15 @@ function App() {
     const actualFocusTime = Math.max(0, totalElapsedTime - state.activeSession.totalPausedTime);
     const actualFocusTimeSeconds = Math.floor(actualFocusTime / 1000);
 
+    console.log('Debug - handleCompleteSession:', {
+      sessionEndTime,
+      startedAt: state.activeSession.startedAt.getTime(),
+      totalElapsedTime: totalElapsedTime + 'ms',
+      totalPausedTime: state.activeSession.totalPausedTime + 'ms',
+      actualFocusTime: actualFocusTime + 'ms',
+      actualFocusTimeSeconds: actualFocusTimeSeconds + 's'
+    });
+
     const completionRecord: CompletionHistory = {
       chainId: chain.id,
       completedAt: new Date(),
@@ -395,6 +420,9 @@ function App() {
       storage.saveChains(updatedChains);
       storage.saveActiveSession(null);
       storage.saveCompletionHistory(updatedHistory);
+
+      // 触发数据更新事件，通知报告界面刷新
+      window.dispatchEvent(new CustomEvent('dataUpdated'));
 
       return {
         ...prev,
@@ -536,6 +564,59 @@ function App() {
     });
   };
 
+  const handleEarlyComplete = () => {
+    if (!state.activeSession) return;
+
+    const chain = state.chains.find(c => c.id === state.activeSession!.chainId);
+    if (!chain) return;
+
+    // 计算实际专注时长（排除暂停时间，精确到秒）
+    const sessionEndTime = Date.now();
+    const totalElapsedTime = sessionEndTime - state.activeSession.startedAt.getTime();
+    const actualFocusTime = Math.max(0, totalElapsedTime - state.activeSession.totalPausedTime);
+    const actualFocusTimeSeconds = Math.floor(actualFocusTime / 1000);
+
+    const completionRecord: CompletionHistory = {
+      chainId: chain.id,
+      completedAt: new Date(),
+      duration: state.activeSession.originalDuration || state.activeSession.duration, // 使用原始设定时长
+      actualFocusTime: actualFocusTimeSeconds, // 实际专注时长（秒）
+      wasSuccessful: true,
+      isEarlyComplete: true, // 标记为提前完成
+      ruleEffects: state.activeSession.ruleEffects || [], // 记录规则效果
+    };
+
+    setState(prev => {
+      const updatedChains = prev.chains.map(c =>
+        c.id === chain.id
+          ? {
+              ...c,
+              currentStreak: c.currentStreak + 1,
+              totalCompletions: c.totalCompletions + 1,
+              lastCompletedAt: new Date(),
+            }
+          : c
+      );
+
+      const updatedHistory = [...prev.completionHistory, completionRecord];
+      
+      storage.saveChains(updatedChains);
+      storage.saveActiveSession(null);
+      storage.saveCompletionHistory(updatedHistory);
+
+      // 触发数据更新事件，通知报告界面刷新
+      window.dispatchEvent(new CustomEvent('dataUpdated'));
+
+      return {
+        ...prev,
+        chains: updatedChains,
+        activeSession: null,
+        completionHistory: updatedHistory,
+        currentView: 'dashboard',
+      };
+    });
+  };
+
   const handleAuxiliaryJudgmentFailure = (chainId: string, reason: string) => {
     console.log('Auxiliary judgment failure reason:', reason); // 记录失败原因用于调试
     setState(prev => {
@@ -663,6 +744,13 @@ function App() {
       currentView: 'dashboard',
       editingChain: null,
       viewingChainId: null,
+    }));
+  };
+
+  const handleViewReports = () => {
+    setState(prev => ({
+      ...prev,
+      currentView: 'reports',
     }));
   };
 

@@ -91,6 +91,7 @@ export const storage = {
       // 向后兼容：为旧数据添加新字段
       actualFocusTime: history.actualFocusTime || (history.duration * 60), // 旧数据假设完整完成
       ruleEffects: history.ruleEffects || [],
+      isEarlyComplete: history.isEarlyComplete || false, // 添加对 isEarlyComplete 的支持
     }));
   },
 

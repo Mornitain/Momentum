@@ -4,7 +4,7 @@ import ChainCard from './ChainCard';
 import ThemeToggle from './ThemeToggle';
 import Settings from './Settings';
 import ImportExport from './ImportExport';
-import { Settings as SettingsIcon, Archive } from 'lucide-react';
+import { Settings as SettingsIcon, Archive, BarChart3 } from 'lucide-react';
 
 interface DashboardProps {
   chains: Chain[];
@@ -17,6 +17,7 @@ interface DashboardProps {
   onCancelScheduledSession?: (chainId: string) => void;
   onDeleteChain: (chainId: string) => void;
   onExportChain: (chainId: string) => void;
+  onViewReports?: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -30,6 +31,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onCancelScheduledSession,
   onDeleteChain,
   onExportChain,
+  onViewReports,
 }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [showImportExport, setShowImportExport] = useState(false);
@@ -117,6 +119,15 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </p>
               </div>
               <div className="flex items-center space-x-3">
+                {onViewReports && (
+                  <button
+                    onClick={onViewReports}
+                    className="bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-6 py-3 rounded-2xl font-medium transition-all duration-300 flex items-center space-x-2 hover:scale-105 border border-purple-200 dark:border-purple-700"
+                  >
+                    <BarChart3 size={16} />
+                    <span className="font-chinese font-medium">报告</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setShowSettings(true)}
                   className="bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-6 py-3 rounded-2xl font-medium transition-all duration-300 flex items-center space-x-2 hover:scale-105 border border-blue-200 dark:border-blue-700"

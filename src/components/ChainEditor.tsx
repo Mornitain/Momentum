@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Chain } from '../types';
-import { ArrowLeft, Save, Headphones, Code, BookOpen, Dumbbell, Coffee, Target, Clock, Bell } from 'lucide-react';
-import { getCustomTriggersForTemplates, getCustomSignalsForTemplates } from '../utils/customTemplates';
+import { ArrowLeft, Save, Target, Clock } from 'lucide-react';
+import { getAllTriggers, getAllSignals } from '../utils/customTemplates';
+
+interface TemplateItem {
+  icon: any;
+  text: string;
+  color: string;
+}
 
 interface ChainEditorProps {
   chain?: Chain;
@@ -9,23 +15,6 @@ interface ChainEditorProps {
   onSave: (chain: Omit<Chain, 'id' | 'currentStreak' | 'auxiliaryStreak' | 'totalCompletions' | 'totalFailures' | 'auxiliaryFailures' | 'createdAt' | 'lastCompletedAt'>) => void;
   onCancel: () => void;
 }
-
-const TRIGGER_TEMPLATES = [
-  { icon: Headphones, text: '戴上降噪耳机', color: 'text-primary-500' },
-  { icon: Code, text: '打开编程软件', color: 'text-green-500' },
-  { icon: BookOpen, text: '坐到书房书桌前', color: 'text-blue-500' },
-  { icon: Dumbbell, text: '换上运动服', color: 'text-red-500' },
-  { icon: Coffee, text: '准备一杯咖啡', color: 'text-yellow-500' },
-  { icon: Target, text: '自定义触发器', color: 'text-gray-500' },
-];
-
-const AUXILIARY_SIGNAL_TEMPLATES = [
-  { icon: Target, text: '打响指', color: 'text-primary-500' },
-  { icon: Clock, text: '设置手机闹钟', color: 'text-green-500' },
-  { icon: Bell, text: '按桌上的铃铛', color: 'text-blue-500' },
-  { icon: Coffee, text: '说"开始预约"', color: 'text-yellow-500' },
-  { icon: Target, text: '自定义信号', color: 'text-gray-500' },
-];
 
 const AUXILIARY_DURATION_PRESETS = [5, 10, 15, 20, 30, 45];
 const DURATION_PRESETS = [25, 30, 45, 60, 90, 120];
@@ -56,26 +45,32 @@ const ChainEditor: React.FC<ChainEditorProps> = ({
     chain?.auxiliaryCompletionTrigger || (chain?.trigger || trigger)
   );
   
-  const [allTriggerTemplates, setAllTriggerTemplates] = useState(TRIGGER_TEMPLATES);
-  const [allSignalTemplates, setAllSignalTemplates] = useState(AUXILIARY_SIGNAL_TEMPLATES);
+  const [allTriggerTemplates, setAllTriggerTemplates] = useState<TemplateItem[]>([]);
+  const [allSignalTemplates, setAllSignalTemplates] = useState<TemplateItem[]>([]);
 
   // 加载自定义模板
   useEffect(() => {
     const updateTemplates = () => {
-      const customTriggers = getCustomTriggersForTemplates();
-      const customSignals = getCustomSignalsForTemplates();
+      const allTriggers = getAllTriggers();
+      const allSignals = getAllSignals();
       
-      // 将自定义模板插入到"自定义"选项之前
+      // 将完整的触发器和信号列表转换为模板格式，并添加"自定义"选项
       const triggersWithCustom = [
-        ...TRIGGER_TEMPLATES.slice(0, -1), // 除了最后的"自定义触发器"
-        ...customTriggers,
-        TRIGGER_TEMPLATES[TRIGGER_TEMPLATES.length - 1] // "自定义触发器"
+        ...allTriggers.map(trigger => ({
+          icon: trigger.icon || Target,
+          text: trigger.text,
+          color: trigger.color || 'text-gray-500'
+        })),
+        { icon: Target, text: '自定义触发器', color: 'text-gray-500' }
       ];
       
       const signalsWithCustom = [
-        ...AUXILIARY_SIGNAL_TEMPLATES.slice(0, -1), // 除了最后的"自定义信号"
-        ...customSignals,
-        AUXILIARY_SIGNAL_TEMPLATES[AUXILIARY_SIGNAL_TEMPLATES.length - 1] // "自定义信号"
+        ...allSignals.map(signal => ({
+          icon: signal.icon || Target,
+          text: signal.text,
+          color: signal.color || 'text-gray-500'
+        })),
+        { icon: Target, text: '自定义信号', color: 'text-gray-500' }
       ];
       
       setAllTriggerTemplates(triggersWithCustom);
@@ -221,7 +216,7 @@ const ChainEditor: React.FC<ChainEditorProps> = ({
                   <option value="" disabled className="text-gray-400">
                     选择触发动作
                   </option>
-                  {allTriggerTemplates.map((template, index) => (
+                  {allTriggerTemplates.map((template: TemplateItem, index: number) => (
                     <option key={index} value={template.text} className="text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700">
                       {template.text}
                     </option>
@@ -351,7 +346,7 @@ const ChainEditor: React.FC<ChainEditorProps> = ({
                   <option value="" disabled className="text-gray-400">
                     选择预约信号
                   </option>
-                  {allSignalTemplates.map((template, index) => (
+                  {allSignalTemplates.map((template: TemplateItem, index: number) => (
                     <option key={index} value={template.text} className="text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700">
                       {template.text}
                     </option>
